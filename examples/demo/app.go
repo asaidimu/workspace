@@ -21,12 +21,21 @@ import (
 	"github.com/asaidimu/workspace/store"
 )
 
-// phase is which screen the program is on.
+// phase is which screen the program is on. Once a conversation is open the
+// chat screen hosts everything; pickers and help are overlays on it.
 type phase int
 
 const (
 	phaseModels phase = iota
 	phaseChat
+)
+
+// dialog names the overlay open over the chat screen, if any.
+const (
+	dialogNone     = ""
+	dialogModel    = "model"
+	dialogSessions = "sessions"
+	dialogHelp     = "help"
 )
 
 // Messages from outside the Update loop: workspace events, run polls, and
@@ -49,6 +58,10 @@ type appConfig struct {
 	owner        string
 	instructions string
 	models       []provider.ModelInfo
+	// sessions are the persisted conversations, newest first. When non-empty
+	// the first one resumes after the model pick instead of creating a fresh
+	// conversation.
+	sessions []domain.Conversation
 }
 
 type app struct {
@@ -76,6 +89,20 @@ type app struct {
 	status     string
 	failure    string
 	notice     string
+	usage      domain.Usage
+
+	// queued holds messages typed while a run was in flight; the poll loop
+	// sends them FIFO once the run succeeds.
+	queued []string
+
+	// dialog is which overlay is open (dialogNone when none), with its
+	// cursor and type-to-filter text.
+	dialog       string
+	dialogCursor int
+	dialogFilter string
+
+	// expand toggles collapsed tool output and thinking blocks (ctrl+o).
+	expand bool
 
 	quitting bool
 }
@@ -127,24 +154,50 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.spin, cmd = a.spin.Update(msg)
 		return a, cmd
 
-	case eventMsg:
-		line := fmt.Sprintf("%s %s", msg.env.At.Format("15:04:05"), msg.env.Name)
-		a.lastEvent = line
-		a.events = append(a.events, line)
-		if len(a.events) > 200 {
-			a.events = a.events[len(a.events)-200:]
-		}
-		if req, ok := msg.env.Event.(agent.ApprovalRequested); ok {
-			a.reload()
-			a.addApproval(req)
+	case tea.MouseMsg:
+		// Mouse wheel scrolls the transcript; dialogs and the picker
+		// ignore it.
+		if a.phase == phaseChat && a.dialog == dialogNone {
+			switch msg.Button {
+			case tea.MouseButtonWheelUp:
+				a.view.ScrollUp(1)
+			case tea.MouseButtonWheelDown:
+				a.view.ScrollDown(1)
+			}
 		}
 		return a, nil
+
+	case eventMsg:
+		return a.event(msg)
 
 	case pollRunMsg:
 		return a.poll(msg.runID)
 
 	case tea.KeyMsg:
 		return a.key(msg)
+	}
+	return a, nil
+}
+
+// event records one workspace envelope. Turn events for the open
+// conversation reload the transcript immediately, so tool calls and results
+// appear while the run is still working — the gap opencode never leaves.
+func (a *app) event(msg eventMsg) (tea.Model, tea.Cmd) {
+	env := msg.env
+	line := fmt.Sprintf("%s %s", env.At.Format("15:04:05"), env.Name)
+	a.lastEvent = line
+	a.events = append(a.events, line)
+	if len(a.events) > 200 {
+		a.events = a.events[len(a.events)-200:]
+	}
+	if req, ok := env.Event.(agent.ApprovalRequested); ok {
+		a.reload()
+		a.addApproval(req)
+		return a, nil
+	}
+	if a.phase == phaseChat && env.ConversationID != "" && env.ConversationID == a.convID &&
+		strings.HasPrefix(env.Name, "turn.") {
+		a.reload()
 	}
 	return a, nil
 }
@@ -200,6 +253,9 @@ func (a *app) chatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// must not accumulate in the hidden input.
 		return a, nil
 	}
+	if a.dialog != dialogNone {
+		return a.dialogKeys(msg)
+	}
 	if a.paletteVisible() {
 		matches := a.paletteMatches()
 		switch msg.String() {
@@ -225,9 +281,6 @@ func (a *app) chatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "enter":
-		if a.runID != "" {
-			return a, nil // a run is in flight; wait for it
-		}
 		text := strings.TrimSpace(a.input.Value())
 		if text == "" {
 			return a, nil
@@ -235,10 +288,22 @@ func (a *app) chatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if strings.HasPrefix(text, "/") {
 			return a.runCommand(text)
 		}
+		if a.runID != "" {
+			// opencode behaviour: while the agent works, what you type
+			// queues and sends when the run finishes.
+			a.queued = append(a.queued, text)
+			a.input.SetValue("")
+			a.syncLayout()
+			return a, nil
+		}
 		return a.send(text)
 	case "ctrl+j":
 		a.input.InsertString("\n")
 		a.syncLayout()
+		return a, nil
+	case "ctrl+o":
+		a.expand = !a.expand
+		a.renderTranscript()
 		return a, nil
 	case "ctrl+r":
 		return a.retry()
@@ -270,10 +335,21 @@ func (a *app) chatKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // selectModel locks the chosen model in and opens the conversation the chat
-// sends into, so the first message needs no setup.
+// sends into: the newest persisted one when the store has history, a fresh
+// conversation otherwise.
 func (a *app) selectModel() tea.Cmd {
 	m := a.cfg.models[a.cursor]
 	a.modelID = m.ID
+
+	if len(a.cfg.sessions) > 0 {
+		a.convID = a.cfg.sessions[0].ID
+		a.phase = phaseChat
+		a.status = "ready"
+		a.notice = ""
+		a.syncLayout()
+		a.reload()
+		return tea.Batch(a.input.Focus())
+	}
 
 	conv, err := a.createConversation()
 	if err != nil {
@@ -375,6 +451,18 @@ func (a *app) poll(runID string) (tea.Model, tea.Cmd) {
 			a.failure = "run cancelled"
 		}
 		a.reload()
+		// Drain the queue on success; hand the first queued message back
+		// for editing when the run did not make it.
+		if run.Status == domain.RunSucceeded && len(a.queued) > 0 {
+			next := a.queued[0]
+			a.queued = a.queued[1:]
+			return a.send(next)
+		}
+		if run.Status != domain.RunSucceeded && len(a.queued) > 0 {
+			a.input.SetValue(a.queued[0])
+			a.queued = a.queued[1:]
+			a.syncLayout()
+		}
 		return a, nil
 	case run.Status == domain.RunWaiting:
 		// The approval event carries the call; keep polling so the run is
@@ -395,7 +483,8 @@ func (a *app) cancelRun() {
 }
 
 // reload re-reads the conversation's active chain — user turns, committed
-// agent turns and tool traffic — oldest first.
+// agent turns and tool traffic — oldest first, and refreshes the session
+// usage totals from the agent turns' usage records.
 func (a *app) reload() {
 	chain, err := a.cfg.handle.Turns().Chain(context.Background(), a.convID, store.ChainOptions{})
 	if err != nil {
@@ -403,12 +492,31 @@ func (a *app) reload() {
 		return
 	}
 	a.transcript = chain
+	a.sumUsage()
 	a.renderTranscript()
 }
 
+// sumUsage totals the token and cost records the agent turns carry, for the
+// footer.
+func (a *app) sumUsage() {
+	var u domain.Usage
+	for _, t := range a.transcript {
+		if t.Actor.Kind != domain.ActorAgent {
+			continue
+		}
+		u.InputTokens += t.Usage.InputTokens
+		u.OutputTokens += t.Usage.OutputTokens
+		u.CostMicros += t.Usage.CostMicros
+		if t.Usage.Currency != "" {
+			u.Currency = t.Usage.Currency
+		}
+	}
+	a.usage = u
+}
+
 // syncLayout sizes the transcript and composer for the current window and
-// input height. The composer grows with the text (up to six rows) and the
-// transcript gives back the rows it takes.
+// input height. The composer grows with the text (up to six rows), the
+// queue rows and the transcript share what is left.
 func (a *app) syncLayout() {
 	if a.width == 0 {
 		a.width, a.height = 80, 24
@@ -421,7 +529,7 @@ func (a *app) syncLayout() {
 	a.input.SetHeight(a.inputLines)
 
 	a.view.Width = max(a.width, 20)
-	a.view.Height = max(a.height-a.composerHeight()-a.paletteHeight()-4, 3)
+	a.view.Height = max(a.height-a.composerHeight()-a.paletteHeight()-a.queueHeight()-4, 3)
 	a.renderTranscript()
 }
 
@@ -432,18 +540,27 @@ func (a *app) renderTranscript() {
 	atBottom := a.view.AtBottom()
 	width := max(a.width-2, 20)
 
+	rc := renderCtx{width: width, expand: a.expand, runActive: a.runID != "", done: map[string]bool{}}
+	for _, t := range a.transcript {
+		for _, b := range t.Blocks {
+			if b.Type == "tool_result" {
+				rc.done[blockString(b, "call_id")] = true
+			}
+		}
+	}
+
 	var b strings.Builder
 	for i, t := range a.transcript {
 		if i > 0 {
 			b.WriteString("\n\n")
 		}
-		b.WriteString(renderTurn(t, width))
+		b.WriteString(renderTurn(t, rc))
 	}
 	if a.runID != "" && len(a.pending) == 0 {
 		if b.Len() > 0 {
 			b.WriteString("\n\n")
 		}
-		b.WriteString(roleStyle("agent").Render("▌") + " " + a.spin.View() + " " +
+		b.WriteString(accentStyle.Render("●") + " " + a.spin.View() + " " +
 			mutedStyle.Render("thinking…"))
 	}
 	if b.Len() == 0 {
@@ -467,7 +584,13 @@ func (a *app) View() string {
 	if a.phase == phaseModels {
 		return a.modelsView()
 	}
-	return a.chatView()
+	chat := a.chatView()
+	if a.dialog != dialogNone {
+		if box := a.dialogView(); box != "" {
+			return overlayCenter(chat, box, a.width, a.height)
+		}
+	}
+	return chat
 }
 
 // headerView is the top bar: the wordmark on the left, the model and
@@ -491,6 +614,31 @@ func (a *app) paletteHeight() int {
 		return 0
 	}
 	return len(a.paletteMatches()) + 2
+}
+
+// queueHeight is the rows the queued-message list takes above the composer.
+func (a *app) queueHeight() int {
+	if a.phase != phaseChat || len(a.queued) == 0 || len(a.pending) > 0 {
+		return 0
+	}
+	return min(len(a.queued), 3) + 1
+}
+
+// queueView lists what will send when the current run finishes.
+func (a *app) queueView() string {
+	if a.queueHeight() == 0 {
+		return ""
+	}
+	shown := a.queued
+	if len(shown) > 3 {
+		shown = shown[len(shown)-3:]
+	}
+	var lines []string
+	for _, q := range shown {
+		lines = append(lines, faintStyle.Render("⏎ "+truncate(q, max(a.width-6, 8))))
+	}
+	lines = append(lines, mutedStyle.Render(fmt.Sprintf("queued (%d) — sends when the run finishes", len(a.queued))))
+	return strings.Join(lines, "\n")
 }
 
 // composerHeight is the rows the composer area takes, border included. The
@@ -600,11 +748,13 @@ func (a *app) resolveApproval(approve bool) (tea.Model, tea.Cmd) {
 }
 
 // footerView is two lines: status and key hints, then the last event or the
-// error that needs attention.
+// error that needs attention, with the session's token and cost totals on
+// the right.
 func (a *app) footerView() string {
 	status, hints := a.statusLine()
 	first := padBetween(status, mutedStyle.Render(hints), max(a.width, 20))
 
+	usage := a.usageText()
 	second := mutedStyle.Render("event: " + orNone(a.lastEvent))
 	switch {
 	case a.failure != "":
@@ -612,21 +762,55 @@ func (a *app) footerView() string {
 	case a.notice != "":
 		second = errorStyle.Render("✗ " + a.notice)
 	}
-	second = padBetween(second, "", max(a.width, 20))
+	second = padBetween(truncate(second, max(a.width-lipgloss.Width(usage)-2, 20)), usage, max(a.width, 20))
 	return first + "\n" + second
 }
 
+// usageText renders the session totals for the footer: the model's context
+// window and the tokens and cost the conversation has spent.
+func (a *app) usageText() string {
+	var ctx int
+	for _, m := range a.cfg.models {
+		if m.ID == a.modelID {
+			ctx = m.Capabilities.ContextWindow
+			break
+		}
+	}
+	parts := []string{}
+	if ctx > 0 {
+		parts = append(parts, "ctx "+compactCount(int64(ctx)))
+	}
+	if a.usage.InputTokens > 0 || a.usage.OutputTokens > 0 {
+		parts = append(parts, fmt.Sprintf("%d in / %d out", a.usage.InputTokens, a.usage.OutputTokens))
+	}
+	if a.usage.CostMicros > 0 {
+		unit := a.usage.Currency
+		if unit == "" {
+			unit = "µ"
+		}
+		parts = append(parts, fmt.Sprintf("%.4f %s", float64(a.usage.CostMicros)/1e6, unit))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return faintStyle.Render(strings.Join(parts, " · "))
+}
+
 func (a *app) statusLine() (status, hints string) {
+	queue := ""
+	if len(a.queued) > 0 {
+		queue = fmt.Sprintf(" · %d queued", len(a.queued))
+	}
 	if len(a.pending) > 0 {
 		return errorStyle.Render("◌ waiting for permission"), "y approve · n reject · esc cancel"
 	}
 	if a.runID != "" {
-		return a.spin.View() + " " + textStyle.Render("working"), "esc cancel · pgup/pgdn scroll"
+		return a.spin.View() + " " + textStyle.Render("working"), "esc cancel · ctrl+o detail · pgup/pgdn scroll"
 	}
 	if a.failure != "" || a.status == "failed" {
 		return errorStyle.Render("✗ failed"), "ctrl+r retry · esc quit"
 	}
-	return okStyle.Render("● ready"), "enter send · / commands · ctrl+j newline · esc quit"
+	return okStyle.Render("● ready"), "enter send · / commands · ctrl+o detail · ctrl+j newline · esc quit" + queue
 }
 
 func (a *app) chatView() string {
@@ -638,6 +822,9 @@ func (a *app) chatView() string {
 	if palette := a.paletteView(); palette != "" {
 		parts = append(parts, palette)
 	}
+	if queue := a.queueView(); queue != "" {
+		parts = append(parts, queue)
+	}
 	parts = append(parts, a.composerView(), a.footerView())
 	return strings.Join(parts, "\n")
 }
@@ -646,9 +833,21 @@ func (a *app) modelsView() string {
 	panelWidth := min(max(a.width-12, 24), 64)
 	var b strings.Builder
 	b.WriteString(wordmarkStyle.Render("workspace") + " " + mutedStyle.Render("demo") + "\n")
-	b.WriteString(mutedStyle.Render("choose a model") + "\n\n")
 
-	for i, m := range a.cfg.models {
+	// OpenRouter's live catalogue alone runs to hundreds of models, so the
+	// picker scrolls a window around the cursor instead of listing them all.
+	header := "choose a model"
+	if n := len(a.cfg.models); n > listWindow {
+		header += fmt.Sprintf("  (%d/%d)", a.cursor+1, n)
+	}
+	b.WriteString(mutedStyle.Render(header) + "\n\n")
+
+	lo, hi := windowAround(a.cursor, len(a.cfg.models), listWindow)
+	if lo > 0 {
+		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ↑ %d more", lo)) + "\n")
+	}
+	for i := lo; i < hi; i++ {
+		m := a.cfg.models[i]
 		id := fmt.Sprintf("%-22s", truncate(m.ID, 22))
 		meta := describePricing(m)
 		if i == a.cursor {
@@ -662,6 +861,9 @@ func (a *app) modelsView() string {
 			continue
 		}
 		b.WriteString("  " + textStyle.Render(id) + " " + mutedStyle.Render(meta) + "\n")
+	}
+	if hi < len(a.cfg.models) {
+		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ↓ %d more", len(a.cfg.models)-hi)) + "\n")
 	}
 
 	b.WriteString("\n" + mutedStyle.Render("↑/↓ move · enter select · q quit"))
@@ -677,14 +879,28 @@ func pollAfter(d time.Duration, runID string) tea.Cmd {
 }
 
 func describePricing(m provider.ModelInfo) string {
+	ctx := compactCount(int64(m.Capabilities.ContextWindow))
 	p := m.Pricing
 	if p.InputMicrosPerMTok == 0 && p.OutputMicrosPerMTok == 0 {
-		return fmt.Sprintf("%d ctx", m.Capabilities.ContextWindow)
+		return ctx + " ctx"
 	}
-	return fmt.Sprintf("$%.2f/M in · $%.2f/M out · %d ctx",
+	return fmt.Sprintf("$%.2f→$%.2f /M · %s ctx",
 		float64(p.InputMicrosPerMTok)/1e6,
 		float64(p.OutputMicrosPerMTok)/1e6,
-		m.Capabilities.ContextWindow)
+		ctx)
+}
+
+// compactCount renders big numbers the way a status line wants them:
+// 1048576 becomes 1.0M, 128000 becomes 128k.
+func compactCount(n int64) string {
+	switch {
+	case n >= 1_000_000:
+		return fmt.Sprintf("%.1fM", float64(n)/1e6)
+	case n >= 1_000:
+		return fmt.Sprintf("%dk", n/1_000)
+	default:
+		return fmt.Sprintf("%d", n)
+	}
 }
 
 func orNone(s string) string {

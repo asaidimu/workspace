@@ -373,7 +373,7 @@ func TestSlashPaletteFiltersCompletesAndRuns(t *testing.T) {
 	if got := len(strings.Split(view, "\n")); got != 30 {
 		t.Errorf("palette view has %d lines, want 30", got)
 	}
-	for _, want := range []string{"/help", "/new", "/model", "/retry", "/quit"} {
+	for _, want := range []string{"/help", "/new", "/model", "/sessions", "/retry", "/quit"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("palette is missing %q:\n%s", want, view)
 		}
@@ -390,8 +390,16 @@ func TestSlashPaletteFiltersCompletesAndRuns(t *testing.T) {
 		t.Fatalf("tab completed to %q, want /model ", got)
 	}
 	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if a.phase != phaseModels {
-		t.Errorf("phase = %v after /model, want the picker", a.phase)
+	if a.dialog != dialogModel {
+		t.Fatalf("/model opened %q, want the model dialog", a.dialog)
+	}
+	view = a.View()
+	if !strings.Contains(view, "Select model") || !strings.Contains(view, "scripted") {
+		t.Errorf("model dialog is missing its list:\n%s", view)
+	}
+	a.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if a.dialog != dialogNone {
+		t.Errorf("esc did not close the dialog, got %q", a.dialog)
 	}
 }
 
@@ -446,15 +454,21 @@ func TestSlashQuitLeavesTheDemo(t *testing.T) {
 
 func TestMarkdownRendererFormatsBlocks(t *testing.T) {
 	out := strings.Join(renderMarkdown("## Blocks\n\n- `document`\n- **json**\n\n```go\nfmt.Println(1)\n```", 40), "\n")
-	for _, want := range []string{"Blocks", "• document", "• json", "fmt.Println(1)"} {
+	for _, want := range []string{"Blocks", "• ", "document", "json", "fmt.Println(1)"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("markdown output is missing %q:\n%s", want, out)
 		}
 	}
-	for _, unwanted := range []string{"## ", "- `", "**", "```"} {
+	for _, unwanted := range []string{"## ", "- `", "**", "```", "\x1b"} {
 		if strings.Contains(out, unwanted) {
 			t.Errorf("markdown output still contains %q:\n%s", unwanted, out)
 		}
+	}
+
+	// The numbered form glamour adds for free over the old renderer.
+	out = strings.Join(renderMarkdown("1. one\n2. two", 40), "\n")
+	if !strings.Contains(out, "1. one") || !strings.Contains(out, "2. two") {
+		t.Errorf("numbered list did not render:\n%s", out)
 	}
 }
 
@@ -516,5 +530,241 @@ func TestChatLayoutFillsTheWindow(t *testing.T) {
 	}
 	if !strings.Contains(view, "conv "+a.convID) {
 		t.Errorf("header lost the conversation id:\n%s", view)
+	}
+}
+
+// TestEnterQueuesWhileRunInFlight covers the opencode input behaviour: what
+// you type while the agent works queues up and auto-sends when the run
+// finishes, one message per run.
+func TestEnterQueuesWhileRunInFlight(t *testing.T) {
+	a, sp := newTestApp(t)
+	sp.ReplyText("one")
+	sp.ReplyText("two")
+
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	for _, r := range "hi" {
+		a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.runID == "" {
+		t.Fatal("send did not start a run")
+	}
+
+	for _, r := range "again" {
+		a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if len(a.queued) != 1 || a.queued[0] != "again" {
+		t.Fatalf("queued = %v, want [again]", a.queued)
+	}
+	if got := a.input.Value(); got != "" {
+		t.Errorf("composer kept %q after queueing", got)
+	}
+	if view := a.View(); !strings.Contains(view, "queued (1)") {
+		t.Errorf("view does not show the queue:\n%s", view)
+	}
+
+	// Both runs settle inside the poll loop: the first one's terminal
+	// poll starts the queued send.
+	waitForRun(t, a)
+	if len(a.queued) != 0 {
+		t.Errorf("queue did not drain: %v", a.queued)
+	}
+	if len(a.transcript) != 4 {
+		t.Fatalf("transcript has %d turns, want hi/one/again/two: %+v", len(a.transcript), a.transcript)
+	}
+	for turn, want := range map[int]string{0: "hi", 1: "one", 2: "again", 3: "two"} {
+		if got := turnBody(a.transcript[turn]); got != want {
+			t.Errorf("turn %d = %q, want %q", turn, got, want)
+		}
+	}
+	if got := len(sp.Requests()); got != 2 {
+		t.Errorf("provider saw %d requests, want one per queued message", got)
+	}
+}
+
+// TestFailedRunHandsQueuedMessageBack makes sure a failure does not eat what
+// the user queued: the first message returns to the composer for editing.
+func TestFailedRunHandsQueuedMessageBack(t *testing.T) {
+	a, _ := newTestApp(t) // empty script: the run fails
+
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	for _, r := range "hi" {
+		a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	for _, r := range "later" {
+		a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if len(a.queued) != 1 {
+		t.Fatalf("queued = %v, want [later]", a.queued)
+	}
+
+	waitForRun(t, a)
+	if a.failure == "" {
+		t.Fatal("the run did not fail")
+	}
+	if got := a.input.Value(); got != "later" {
+		t.Errorf("composer holds %q, want the queued message back", got)
+	}
+	if len(a.queued) != 0 {
+		t.Errorf("queue still holds %v", a.queued)
+	}
+}
+
+// TestTurnEventsReloadTheTranscript pins the liveness contract: a turn
+// committed while the UI is idle appears as soon as its event arrives, and
+// only for the conversation on screen.
+func TestTurnEventsReloadTheTranscript(t *testing.T) {
+	a, _ := newTestApp(t)
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	_, err := a.cfg.handle.Turns().Append(context.Background(), a.convID, workspace.AppendTurn{
+		Actor:  domain.Actor{Kind: domain.ActorSystem, ID: "scripted"},
+		Blocks: workspace.Text("committed behind the UI's back"),
+	})
+	if err != nil {
+		t.Fatalf("append: %v", err)
+	}
+	if len(a.transcript) != 0 {
+		t.Fatalf("transcript updated without an event: %+v", a.transcript)
+	}
+
+	a.Update(eventMsg{env: kernel.EventEnvelope{Name: "turn.appended", ConversationID: a.convID, At: time.Now()}})
+	if len(a.transcript) != 1 || turnBody(a.transcript[0]) != "committed behind the UI's back" {
+		t.Fatalf("transcript after event = %+v, want the committed turn", a.transcript)
+	}
+
+	a.Update(eventMsg{env: kernel.EventEnvelope{Name: "turn.appended", ConversationID: "another-conversation", At: time.Now()}})
+	if len(a.transcript) != 1 {
+		t.Errorf("an event for another conversation reloaded the transcript")
+	}
+}
+
+// TestMouseWheelScrollsTheTranscript covers the mouse wheel: rolling up
+// moves the viewport off the bottom.
+func TestMouseWheelScrollsTheTranscript(t *testing.T) {
+	a, _ := newTestApp(t)
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	for i := 0; i < 30; i++ {
+		if _, err := a.cfg.handle.Turns().Append(context.Background(), a.convID, workspace.AppendTurn{
+			Actor:  domain.Actor{Kind: domain.ActorUser, ID: "test"},
+			Blocks: workspace.Text(fmt.Sprintf("message %d with enough words to wrap around a little", i)),
+		}); err != nil {
+			t.Fatalf("append %d: %v", i, err)
+		}
+	}
+	a.reload()
+	a.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	atBottom := a.view.YOffset
+	if atBottom == 0 {
+		t.Fatal("transcript fits the viewport, nothing to scroll")
+	}
+
+	a.Update(tea.MouseMsg{Button: tea.MouseButtonWheelUp})
+	if a.view.YOffset >= atBottom {
+		t.Errorf("wheel up did not scroll away from the bottom: %d (was %d)", a.view.YOffset, atBottom)
+	}
+	before := a.view.YOffset
+	a.Update(tea.MouseMsg{Button: tea.MouseButtonWheelUp})
+	if a.view.YOffset >= before {
+		t.Errorf("wheel up did not keep scrolling: %d then %d", before, a.view.YOffset)
+	}
+	scrolledUp := a.view.YOffset
+	a.Update(tea.MouseMsg{Button: tea.MouseButtonWheelDown})
+	if a.view.YOffset <= scrolledUp {
+		t.Errorf("wheel down did not scroll back: %d after %d", a.view.YOffset, scrolledUp)
+	}
+}
+
+// TestToolOutputCollapsesAndExpands pins the detail contract: a chatty
+// command collapses to a preview with a hint, and ctrl+o reveals the rest.
+func TestToolOutputCollapsesAndExpands(t *testing.T) {
+	a, sp := newTestApp(t)
+	parkOnShell(t, a, sp, "i=1; while [ $i -le 20 ]; do echo line$i; i=$((i+1)); done")
+
+	a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	waitForRun(t, a)
+	if a.failure != "" {
+		t.Fatalf("run failed: %s", a.failure)
+	}
+
+	collapsed := a.View()
+	if strings.Contains(collapsed, "line20") {
+		t.Errorf("collapsed view leaked the output tail:\n%s", collapsed)
+	}
+	if !strings.Contains(collapsed, "ctrl+o") {
+		t.Errorf("collapsed view has no expand hint:\n%s", collapsed)
+	}
+
+	a.Update(tea.KeyMsg{Type: tea.KeyCtrlO})
+	if !a.expand {
+		t.Fatal("ctrl+o did not set the expand flag")
+	}
+	if expanded := a.View(); !strings.Contains(expanded, "line20") {
+		t.Errorf("expanded view is missing the output tail:\n%s", expanded)
+	}
+}
+
+// TestSessionsDialogSwitchesConversation covers the persisted-session
+// surface: /sessions lists the conversations, and enter switches to the
+// newest one with a reloaded transcript.
+func TestSessionsDialogSwitchesConversation(t *testing.T) {
+	a, _ := newTestApp(t)
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	first := a.convID
+
+	second, err := a.cfg.handle.Conversations().Create(context.Background(), workspace.CreateConversation{
+		Title: "second thread",
+	})
+	if err != nil {
+		t.Fatalf("create second conversation: %v", err)
+	}
+
+	a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/sessions")})
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.dialog != dialogSessions {
+		t.Fatalf("dialog = %q, want sessions", a.dialog)
+	}
+	if view := a.View(); !strings.Contains(view, "second thread") {
+		t.Errorf("sessions dialog does not list the new conversation:\n%s", view)
+	}
+
+	// Newest first, so enter lands on the second conversation.
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.dialog != dialogNone {
+		t.Fatalf("dialog still %q after selecting", a.dialog)
+	}
+	if a.convID != second.ID {
+		t.Fatalf("convID = %q, want the picked conversation %q (was %q)", a.convID, second.ID, first)
+	}
+	if len(a.transcript) != 0 {
+		t.Errorf("transcript = %+v, want the empty second conversation", a.transcript)
+	}
+}
+
+// TestHelpDialogOpensAndCloses replaces the old "type /" help hack.
+func TestHelpDialogOpensAndCloses(t *testing.T) {
+	a, _ := newTestApp(t)
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/help")})
+	a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if a.dialog != dialogHelp {
+		t.Fatalf("dialog = %q, want help", a.dialog)
+	}
+	view := a.View()
+	for _, want := range []string{"Commands", "/sessions", "ctrl+o"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("help dialog is missing %q:\n%s", want, view)
+		}
+	}
+
+	a.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if a.dialog != dialogNone {
+		t.Errorf("esc did not close the help dialog")
 	}
 }

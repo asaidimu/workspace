@@ -22,6 +22,7 @@ func commandTable() []command {
 		{name: "/help", desc: "show the command list", run: runHelp},
 		{name: "/new", desc: "start a new conversation", run: runNew},
 		{name: "/model", desc: "choose a different model", run: runModel},
+		{name: "/sessions", desc: "switch conversation", run: runSessions},
 		{name: "/retry", desc: "retry the last failed run", run: runRetry},
 		{name: "/quit", desc: "leave the demo", run: runQuit},
 	}
@@ -113,9 +114,7 @@ func lookupCommand(name string) (command, bool) {
 }
 
 func runHelp(a *app, _ string) (tea.Model, tea.Cmd) {
-	// The palette is the help: show every command at once.
-	a.input.SetValue("/")
-	a.cmdCursor = 0
+	a.openDialog(dialogHelp)
 	a.syncLayout()
 	return a, nil
 }
@@ -147,16 +146,25 @@ func runModel(a *app, _ string) (tea.Model, tea.Cmd) {
 		a.notice = "cancel the run first (esc)"
 		return a, nil
 	}
+	// Keep the picker's cursor on the active model for when the initial
+	// full-screen picker is shown again.
 	for i, m := range a.cfg.models {
 		if m.ID == a.modelID {
 			a.cursor = i
 			break
 		}
 	}
-	a.phase = phaseModels
-	a.status = "choose a model"
-	a.pending = nil
-	a.input.SetValue("")
+	a.openDialog(dialogModel)
+	a.syncLayout()
+	return a, nil
+}
+
+func runSessions(a *app, _ string) (tea.Model, tea.Cmd) {
+	if a.runID != "" {
+		a.notice = "cancel the run first (esc)"
+		return a, nil
+	}
+	a.openDialog(dialogSessions)
 	a.syncLayout()
 	return a, nil
 }

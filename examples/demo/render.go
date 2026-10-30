@@ -10,30 +10,77 @@ import (
 	"github.com/asaidimu/workspace/domain"
 )
 
-// renderTurn draws one turn as a left-gutter message: a coloured bar, a role
-// label, then the block bodies. The bar runs the full height of the message
-// so a multi-line reply reads as one unit.
-func renderTurn(t domain.Turn, width int) string {
-	label := roleLabel(t.Actor.Kind)
-	style := roleStyle(label)
-	bar := style.Render("▌")
+// renderCtx carries what a turn's renderer needs to know about the session:
+// the wrap width, whether detail is expanded (ctrl+o), whether a run is in
+// flight, and which tool calls already have results.
+type renderCtx struct {
+	width     int
+	expand    bool
+	runActive bool
+	done      map[string]bool
+}
 
-	body := turnBlocks(t, max(width-2, 10))
-	lines := []string{bar + " " + style.Render(label)}
-	for _, l := range body {
-		if l == "" {
-			lines = append(lines, bar)
-			continue
-		}
-		lines = append(lines, bar+" "+l)
+// renderTurn draws one turn in the opencode manner: the user's words are
+// demoted to a dim prompt-marked block, the assistant speaks in full-width
+// markdown under a small label, and tool traffic renders as status rows.
+func renderTurn(t domain.Turn, rc renderCtx) string {
+	var lines []string
+	switch t.Actor.Kind {
+	case domain.ActorUser:
+		lines = renderUserTurn(t, rc)
+	default:
+		lines = renderAgentTurn(t, rc)
 	}
 	return strings.Join(lines, "\n")
 }
 
-// turnBlocks renders a turn's blocks into styled lines. Each block keeps its
-// own shape: prose goes through the markdown renderer, documents show their
-// title, JSON becomes a code block, and tool traffic is a one-line summary.
-func turnBlocks(t domain.Turn, width int) []string {
+// renderUserTurn is the demoted user message: an accent `❯`, then the dim
+// text. No gutter, no label — the assistant's output owns the screen.
+func renderUserTurn(t domain.Turn, rc renderCtx) []string {
+	glyph := accentStyle.Render("❯")
+	var lines []string
+	for _, b := range t.Blocks {
+		var body []string
+		switch b.Type {
+		case "text":
+			body = wrapText(textFrom(b), max(rc.width-2, 10))
+		case "image":
+			body = []string{mutedStyle.Render("◻ image " + blockString(b, "ref"))}
+		case "file":
+			body = []string{mutedStyle.Render("◻ file " + blockString(b, "name"))}
+		default:
+			body = wrapText(turnBody(domain.Turn{Blocks: []domain.Block{b}}), max(rc.width-2, 10))
+		}
+		for i, l := range body {
+			if i == 0 && len(lines) == 0 {
+				lines = append(lines, glyph+" "+userStyle.Render(l))
+				continue
+			}
+			lines = append(lines, "  "+userStyle.Render(l))
+		}
+	}
+	if len(lines) == 0 {
+		lines = append(lines, glyph+" "+mutedStyle.Render("(empty)"))
+	}
+	return lines
+}
+
+// renderAgentTurn puts a small label above the turn's blocks; the blocks
+// themselves span the full width like opencode's assistant output.
+func renderAgentTurn(t domain.Turn, rc renderCtx) []string {
+	label := roleLabel(t.Actor.Kind)
+	body := turnBlocks(t, rc)
+	lines := []string{faintStyle.Render("●") + " " + mutedStyle.Render(label)}
+	lines = append(lines, body...)
+	if len(body) == 0 {
+		lines = append(lines, mutedStyle.Render("(empty turn)"))
+	}
+	return lines
+}
+
+// turnBlocks renders a turn's blocks into styled lines, one blank line
+// between blocks.
+func turnBlocks(t domain.Turn, rc renderCtx) []string {
 	var out []string
 	appendBlock := func(lines []string) {
 		if len(out) > 0 && len(lines) > 0 {
@@ -44,29 +91,26 @@ func turnBlocks(t domain.Turn, width int) []string {
 	for _, b := range t.Blocks {
 		switch b.Type {
 		case "text":
-			appendBlock(renderMarkdown(textFrom(b), width))
+			appendBlock(renderMarkdown(textFrom(b), rc.width))
 		case "document":
-			appendBlock(renderDocument(b, width))
+			appendBlock(renderDocument(b, rc.width))
 		case "json":
-			appendBlock(renderCodeBlock("json", strings.Split(jsonText(b), "\n"), width))
+			appendBlock(renderCodeBlock("json", strings.Split(jsonText(b), "\n"), rc.width))
 		case "thinking":
-			appendBlock(renderThinking(textFrom(b), width))
+			appendBlock(renderThinking(textFrom(b), rc))
 		case "tool_call":
-			appendBlock(renderToolCall(b, width))
+			appendBlock(renderToolCall(b, rc))
 		case "tool_result":
-			appendBlock(renderToolResult(b, width))
+			appendBlock(renderToolResult(b, rc))
 		case "image":
 			appendBlock([]string{mutedStyle.Render("◻ image " + blockString(b, "ref"))})
 		case "file":
 			appendBlock([]string{mutedStyle.Render("◻ file " + blockString(b, "name"))})
 		case "unknown":
-			appendBlock(wrapText(unknownText(b), width))
+			appendBlock(wrapText(unknownText(b), rc.width))
 		default:
-			appendBlock(wrapText("["+b.Type+"]", width))
+			appendBlock(wrapText("["+b.Type+"]", rc.width))
 		}
-	}
-	if len(out) == 0 {
-		return []string{mutedStyle.Render("(empty turn)")}
 	}
 	return out
 }
@@ -99,77 +143,147 @@ func renderDocument(b domain.Block, width int) []string {
 	return out
 }
 
-func renderThinking(text string, width int) []string {
-	lines := wrapText(text, max(width-2, 8))
-	for i, l := range lines {
-		prefix := "◌ "
-		if i > 0 {
-			prefix = "  "
-		}
-		lines[i] = mutedStyle.Render(prefix + l)
-	}
-	return lines
-}
-
-func renderToolCall(b domain.Block, width int) []string {
-	name := blockString(b, "name")
-	head := lipgloss.NewStyle().Foreground(colTool).Render("⚙ ") + boldStyle.Render(name)
-	args := toolArguments(b)
-	if cmd, ok := args["command"].(string); ok {
-		lines := wrapText("$ "+cmd, max(width-2, 8))
+// renderThinking collapses the model's reasoning to a one-line preview
+// unless detail is expanded (ctrl+o).
+func renderThinking(text string, rc renderCtx) []string {
+	if rc.expand {
+		lines := wrapText(text, max(rc.width-2, 8))
 		for i, l := range lines {
-			if i == 0 {
-				lines[i] = head + " " + codeStyle.Render(l)
-			} else {
-				lines[i] = "  " + codeStyle.Render(l)
+			prefix := "◌ "
+			if i > 0 {
+				prefix = "  "
 			}
+			lines[i] = mutedStyle.Render(prefix + l)
 		}
 		return lines
 	}
+	preview := truncate(strings.Join(strings.Fields(text), " "), max(rc.width-20, 8))
+	return []string{mutedStyle.Render("◌ thinking ") + faintStyle.Render(preview+"  ·  ctrl+o")}
+}
+
+// renderToolCall draws a status row for one call: its state dot, the tool
+// name, and a short argument summary. A call without a result under an
+// active run is running; one without a result on an idle session never
+// completed.
+func renderToolCall(b domain.Block, rc renderCtx) []string {
+	name := blockString(b, "name")
+	callID := blockString(b, "call_id")
+
+	var dotStyle lipgloss.Style
+	var state string
+	switch {
+	case rc.done[callID]:
+		dotStyle = lipgloss.NewStyle().Foreground(colTool)
+	case rc.runActive:
+		dotStyle = accentStyle
+		state = " " + accentStyle.Render("running…")
+	default:
+		dotStyle = errorStyle
+		state = " " + errorStyle.Render("no result")
+	}
+
+	head := dotStyle.Render("●") + " " + boldStyle.Render(name) + state
+
+	args := toolArguments(b)
+	if cmd, ok := args["command"].(string); ok {
+		head += " " + codeStyle.Render(truncate("$ "+cmd, max(rc.width-lipgloss.Width(name)-8, 8)))
+		return []string{head}
+	}
 	if len(args) > 0 {
 		if raw, err := json.Marshal(args); err == nil {
-			head += " " + mutedStyle.Render(truncate(string(raw), max(width-lipgloss.Width(name)-3, 8)))
+			head += " " + mutedStyle.Render(truncate(string(raw), max(rc.width-lipgloss.Width(name)-8, 8)))
 		}
 	}
 	return []string{head}
 }
 
-func renderToolResult(b domain.Block, width int) []string {
+// renderToolResult draws what a call produced. Collapsed (the default) it
+// is the head line plus a one-line preview and a "+N lines" hint; expanded
+// (ctrl+o) it is the full capped output block.
+func renderToolResult(b domain.Block, rc renderCtx) []string {
 	m := blockObject(b)
-	out := blockString(b, "output")
 	style := mutedStyle
 	if m != nil {
 		if isErr, _ := m["is_error"].(bool); isErr {
 			style = errorStyle
 		}
 	}
+
+	var stdouts, stderrs []string
+	var nOut, nErr int
+	exit := ""
 	if m != nil {
 		if o := asObject(m["output"]); o != nil {
-			if cmd, ok := o["command"].(string); ok {
-				head := style.Render("↳ $ " + cmd)
-				if code, ok := o["exit_code"]; ok {
-					head += " " + mutedStyle.Render(fmt.Sprintf("exit %v", code))
-				}
-				lines := []string{head}
-				lines = append(lines, outputLines(o["stdout"], width, false)...)
-				lines = append(lines, outputLines(o["stderr"], width, true)...)
-				return lines
+			if code, ok := o["exit_code"]; ok {
+				exit = fmt.Sprintf("exit %v", code)
 			}
+			stdouts, nOut = outputLines(o["stdout"], rc.width, false, rc.expand)
+			stderrs, nErr = outputLines(o["stderr"], rc.width, true, rc.expand)
 		}
 	}
-	return []string{style.Render("↳ " + truncate(out, max(width-2, 8)))}
+
+	head := style.Render("↳")
+	if exit != "" {
+		head += " " + faintStyle.Render(exit)
+	}
+	lines := []string{head}
+
+	if stdouts == nil && stderrs == nil {
+		out := blockString(b, "output")
+		if rc.expand {
+			return append(lines, wrapText(out, max(rc.width-2, 8))...)
+		}
+		if out != "" {
+			preview := truncate(strings.Join(strings.Fields(out), " "), max(rc.width-8, 8))
+			lines = append(lines, "  "+style.Render(preview))
+		}
+		return lines
+	}
+
+	hidden := 0
+	if !rc.expand {
+		// One preview line from whichever stream has content; the rest is
+		// behind the ctrl+o hint, counted from the real totals rather than
+		// the capped render.
+		all := append(append([]string{}, stdouts...), stderrs...)
+		switch {
+		case len(all) > 1:
+			if len(stdouts) > 0 {
+				lines = append(lines, stdouts[0])
+			} else {
+				lines = append(lines, stderrs[0])
+			}
+			hidden = nOut + nErr - 1
+		case len(all) == 1:
+			lines = append(lines, all[0])
+		}
+		if hidden > 0 {
+			lines = append(lines, faintStyle.Render(fmt.Sprintf("  … +%d lines  ·  ctrl+o", hidden)))
+		}
+		return lines
+	}
+
+	lines = append(lines, stdouts...)
+	lines = append(lines, stderrs...)
+	return lines
 }
 
 // outputLines renders a tool stream as an indented code block, capped so a
-// chatty command cannot take over the transcript.
-func outputLines(value any, width int, isErr bool) []string {
+// chatty command cannot take over the transcript: 2 lines collapsed, 200
+// expanded. The second return is the stream's real line count, so the
+// collapse hint can say how much is hidden.
+func outputLines(value any, width int, isErr, expand bool) ([]string, int) {
 	text, _ := value.(string)
 	text = strings.TrimRight(text, "\n")
 	if text == "" {
-		return nil
+		return nil, 0
 	}
 	raw := strings.Split(text, "\n")
-	const maxLines = 12
+	total := len(raw)
+	maxLines := 2
+	if expand {
+		maxLines = 200
+	}
 	truncated := len(raw) > maxLines
 	if truncated {
 		raw = raw[:maxLines]
@@ -183,75 +297,9 @@ func outputLines(value any, width int, isErr bool) []string {
 		out = append(out, "  "+style.Render(fillWidth(truncate(l, max(width-4, 8)), max(width-4, 8))))
 	}
 	if truncated {
-		out = append(out, mutedStyle.Render("  … output truncated"))
+		out = append(out, faintStyle.Render("  … output capped"))
 	}
-	return out
-}
-
-// renderMarkdown is a deliberately small markdown renderer: headings,
-// bullets, blockquotes, rules, fenced code and inline `code`/`**bold**`.
-// It is not a full CommonMark implementation, and does not try to be.
-func renderMarkdown(text string, width int) []string {
-	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
-	var out []string
-	for i := 0; i < len(lines); {
-		line := lines[i]
-		trimmed := strings.TrimSpace(line)
-
-		if strings.HasPrefix(trimmed, "```") {
-			lang := strings.TrimSpace(strings.TrimPrefix(trimmed, "```"))
-			var body []string
-			i++
-			for i < len(lines) && !strings.HasPrefix(strings.TrimSpace(lines[i]), "```") {
-				body = append(body, lines[i])
-				i++
-			}
-			if i < len(lines) {
-				i++ // closing fence
-			}
-			if len(out) > 0 {
-				out = append(out, "")
-			}
-			out = append(out, renderCodeBlock(lang, body, width)...)
-			out = append(out, "")
-			continue
-		}
-
-		switch {
-		case trimmed == "":
-			out = append(out, "")
-		case isRule(trimmed):
-			out = append(out, mutedStyle.Render(strings.Repeat("─", max(width, 3))))
-		case headingLevel(trimmed) > 0:
-			level := headingLevel(trimmed)
-			body := strings.TrimSpace(trimmed[level:])
-			for _, l := range wrapText(body, width) {
-				out = append(out, headingStyle.Render(l))
-			}
-		case strings.HasPrefix(trimmed, "> "):
-			for _, l := range wrapText(strings.TrimPrefix(trimmed, "> "), max(width-2, 8)) {
-				out = append(out, quoteStyle.Render("│ "+l))
-			}
-		case isBullet(trimmed):
-			body := bulletBody(trimmed)
-			for j, l := range wrapText(body, max(width-2, 8)) {
-				prefix := "• "
-				if j > 0 {
-					prefix = "  "
-				}
-				out = append(out, accentStyle.Render(prefix)+styleInline(l))
-			}
-		default:
-			for _, l := range wrapText(trimmed, width) {
-				out = append(out, styleInline(l))
-			}
-		}
-		i++
-	}
-	for len(out) > 0 && out[len(out)-1] == "" {
-		out = out[:len(out)-1]
-	}
-	return out
+	return out, total
 }
 
 func renderCodeBlock(lang string, body []string, width int) []string {
@@ -268,130 +316,6 @@ func renderCodeBlock(lang string, body []string, width int) []string {
 		out = append(out, "  "+codeStyle.Render(strings.Repeat(" ", inner)))
 	}
 	return out
-}
-
-func headingLevel(s string) int {
-	n := 0
-	for n < len(s) && s[n] == '#' {
-		n++
-	}
-	if n == 0 || n > 6 || n >= len(s) || s[n] != ' ' {
-		return 0
-	}
-	return n
-}
-
-func isRule(s string) bool {
-	if len(s) < 3 {
-		return false
-	}
-	c := s[0]
-	if c != '-' && c != '*' && c != '_' {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		if s[i] != c {
-			return false
-		}
-	}
-	return true
-}
-
-func isBullet(s string) bool {
-	return strings.HasPrefix(s, "- ") || strings.HasPrefix(s, "* ") || strings.HasPrefix(s, "• ")
-}
-
-func bulletBody(s string) string {
-	for _, marker := range []string{"- ", "* ", "• "} {
-		if strings.HasPrefix(s, marker) {
-			return strings.TrimSpace(strings.TrimPrefix(s, marker))
-		}
-	}
-	return s
-}
-
-// styleInline applies the two inline spans the demo cares about: `code` and
-// **bold**. Unclosed markers are left alone.
-func styleInline(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); {
-		if s[i] == '`' {
-			if j := strings.IndexByte(s[i+1:], '`'); j >= 0 {
-				b.WriteString(inlineCodeStyle.Render(s[i+1 : i+1+j]))
-				i += j + 2
-				continue
-			}
-		}
-		if strings.HasPrefix(s[i:], "**") {
-			if j := strings.Index(s[i+2:], "**"); j >= 0 {
-				b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(colText).Render(s[i+2 : i+2+j]))
-				i += j + 4
-				continue
-			}
-		}
-		b.WriteByte(s[i])
-		i++
-	}
-	return b.String()
-}
-
-// wrapText greedily wraps words to width columns, hard-splitting words that
-// are longer than a line. It ignores existing line breaks; callers split
-// lines first when that matters.
-func wrapText(s string, width int) []string {
-	if width < 1 {
-		width = 1
-	}
-	words := strings.Fields(s)
-	if len(words) == 0 {
-		return []string{""}
-	}
-	var out []string
-	line := ""
-	for _, w := range words {
-		for lipgloss.Width(w) > width {
-			head, tail := hardSplit(w, width)
-			if line != "" {
-				out = append(out, line)
-				line = ""
-			}
-			out = append(out, head)
-			w = tail
-		}
-		switch {
-		case line == "":
-			line = w
-		case lipgloss.Width(line)+1+lipgloss.Width(w) <= width:
-			line += " " + w
-		default:
-			out = append(out, line)
-			line = w
-		}
-	}
-	if line != "" {
-		out = append(out, line)
-	}
-	return out
-}
-
-// hardSplit cuts a word at the widest rune boundary that fits.
-func hardSplit(s string, width int) (string, string) {
-	var head []rune
-	for _, r := range s {
-		if lipgloss.Width(string(head)+string(r)) > width {
-			break
-		}
-		head = append(head, r)
-	}
-	if len(head) == 0 {
-		// A single rune wider than the line (a CJK glyph, an emoji) still
-		// has to advance, or the caller's loop would never terminate.
-		for _, r := range s {
-			head = append(head, r)
-			break
-		}
-	}
-	return string(head), s[len(string(head)):]
 }
 
 // asObject normalizes a decoded value into an object: the stores hand back
