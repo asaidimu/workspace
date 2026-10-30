@@ -1,0 +1,32 @@
+{
+  "name": "stream-basic",
+  "request": {
+    "method": "POST",
+    "path": "/v1/chat/completions",
+    "headers": { "Authorization": "Bearer test-key" },
+    "body": {
+      "model": "gpt-5",
+      "max_completion_tokens": 1024,
+      "stream": true,
+      "stream_options": { "include_usage": true },
+      "messages": [
+        { "role": "system", "content": "Be concise." },
+        { "role": "user", "content": [{ "type": "text", "text": "hello" }] }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body_text": "data: {\"id\":\"c1\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"c1\",\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\ndata: {\"id\":\"c1\",\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\ndata: {\"id\":\"c1\",\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"c1\",\"choices\":[],\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":5,\"total_tokens\":17}}\n\ndata: [DONE]\n\n"
+  },
+  "expect": {
+    "stream": [
+      { "kind": "part_started", "index": 0 },
+      { "kind": "part_delta", "index": 0, "delta": "Hello" },
+      { "kind": "part_delta", "index": 0, "delta": " world" },
+      { "kind": "part_done", "index": 0, "text": "Hello world" },
+      { "kind": "usage", "input_tokens": 12, "output_tokens": 5 },
+      { "kind": "finished", "finish": "stop" }
+    ]
+  }
+}

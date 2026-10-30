@@ -1,0 +1,84 @@
+{
+  "sections": [
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 1,
+      "body": "Be concise."
+    },
+    {
+      "id": "context",
+      "title": "Context",
+      "order": 6,
+      "body": "{\"text\":\"shared\"}"
+    }
+  ],
+  "system": [
+    "# Policy\nBe concise.\n\n---\n\n# Context\n{\"text\":\"shared\"}"
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hello"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hi there"
+        }
+      ]
+    }
+  ],
+  "model": "test/model",
+  "max_output_tokens": 0,
+  "budget": {
+    "context_window": 8000,
+    "reserved_output": 800,
+    "used": 18
+  },
+  "diagnostics": [
+    {
+      "code": "token.approximate",
+      "message": "token counts are estimated as bytes/4 and are approximate"
+    },
+    {
+      "code": "content.conflict",
+      "message": "multiple sources offered conflict1",
+      "ref": {
+        "key": "conflict1",
+        "version": 1
+      }
+    },
+    {
+      "code": "content.unresolved",
+      "message": "no content for ghost1",
+      "ref": {
+        "key": "ghost1",
+        "version": 1
+      }
+    },
+    {
+      "code": "content.conflict",
+      "message": "multiple sources offered tomb1",
+      "ref": {
+        "key": "tomb1",
+        "version": 1
+      }
+    },
+    {
+      "code": "content.tombstoned",
+      "message": "dropped tombstoned tomb1",
+      "ref": {
+        "key": "tomb1",
+        "version": 1
+      }
+    }
+  ]
+}

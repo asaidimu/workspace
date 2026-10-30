@@ -1,0 +1,57 @@
+{
+  "name": "generate-tools",
+  "request": {
+    "method": "POST",
+    "path": "/v1beta/models/gemini-2.5-pro:generateContent",
+    "headers": { "x-goog-api-key": "test-key" },
+    "body": {
+      "generationConfig": { "maxOutputTokens": 1024 },
+      "systemInstruction": { "role": "", "parts": [{ "text": "Be concise." }] },
+      "contents": [
+        { "role": "user", "parts": [{ "text": "hello" }] }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "getWeather",
+              "description": "Get current weather for a city.",
+              "parameters": {
+                "type": "object",
+                "properties": { "city": { "type": "string" } },
+                "required": ["city"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "candidates": [
+        {
+          "content": { "role": "model", "parts": [{ "functionCall": { "name": "getWeather", "args": { "city": "Nairobi" } } }] },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 10,
+        "candidatesTokenCount": 8,
+        "totalTokenCount": 18
+      },
+      "modelVersion": "gemini-2.5-pro",
+      "responseId": "resp-g2"
+    }
+  },
+  "expect": {
+    "finish": "tool_calls",
+    "tool_calls": [
+      { "id": "getWeather", "name": "getWeather", "arguments": { "city": "Nairobi" } }
+    ],
+    "input_tokens": 10,
+    "output_tokens": 8
+  }
+}

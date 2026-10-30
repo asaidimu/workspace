@@ -1,0 +1,1316 @@
+{
+  "fixture": "turntree",
+  "ts": "@asaidimu/utils-workspace@9.0.0",
+  "cases": [
+    {
+      "name": "linear-three",
+      "input": {
+        "turns": [
+          {
+            "id": "t1",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "t1-b1",
+                "key": "k-t1-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hello"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z"
+          },
+          {
+            "id": "t2",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "assistant",
+            "blocks": [
+              {
+                "id": "t2-b1",
+                "key": "k-t2-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hi"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t1",
+              "version": 1
+            }
+          },
+          {
+            "id": "t3",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "t3-b1",
+                "key": "k-t3-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "more"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t2",
+              "version": 1
+            }
+          }
+        ],
+        "head": {
+          "id": "t3",
+          "version": 1
+        }
+      },
+      "expected": {
+        "head": {
+          "id": "t3",
+          "version": 1
+        },
+        "chain": [
+          "t1#1",
+          "t2#1",
+          "t3#1"
+        ],
+        "nodes": {
+          "t1": {
+            "id": "t1",
+            "version": 1,
+            "parent": null,
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "t2"
+              ]
+            },
+            "actor": "user"
+          },
+          "t2": {
+            "id": "t2",
+            "version": 1,
+            "parent": {
+              "id": "t1",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "t3"
+              ]
+            },
+            "actor": "assistant"
+          },
+          "t3": {
+            "id": "t3",
+            "version": 1,
+            "parent": {
+              "id": "t2",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {},
+            "actor": "user"
+          }
+        },
+        "queries": [
+          {
+            "op": "chainFrom",
+            "arg": "t1",
+            "result": [
+              "t1#1"
+            ]
+          },
+          {
+            "op": "siblings",
+            "arg": "t2",
+            "result": [
+              "t2#1"
+            ]
+          },
+          {
+            "op": "branchInfo",
+            "arg": "t2",
+            "result": {
+              "versions": [
+                1
+              ],
+              "currentIndex": 0,
+              "total": 1,
+              "hasPrev": false,
+              "hasNext": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "edit-version-sibling",
+      "input": {
+        "turns": [
+          {
+            "id": "t1",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "t1-b1",
+                "key": "k-t1-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hello"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z"
+          },
+          {
+            "id": "t2",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "assistant",
+            "blocks": [
+              {
+                "id": "t2-b1",
+                "key": "k-t2-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hi"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t1",
+              "version": 1
+            }
+          },
+          {
+            "id": "t2",
+            "version": 2,
+            "session": "sess-1",
+            "actor": "assistant",
+            "blocks": [
+              {
+                "id": "t2-b2",
+                "key": "k-t2-2",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hi (edited)"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t1",
+              "version": 1
+            }
+          },
+          {
+            "id": "t3",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "t3-b1",
+                "key": "k-t3-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "more"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t2",
+              "version": 2
+            }
+          }
+        ],
+        "head": {
+          "id": "t3",
+          "version": 1
+        }
+      },
+      "expected": {
+        "head": {
+          "id": "t3",
+          "version": 1
+        },
+        "chain": [
+          "t1#1",
+          "t2#2",
+          "t3#1"
+        ],
+        "nodes": {
+          "t1": {
+            "id": "t1",
+            "version": 1,
+            "parent": null,
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "t2"
+              ]
+            },
+            "actor": "user"
+          },
+          "t2": {
+            "id": "t2",
+            "version": 2,
+            "parent": {
+              "id": "t1",
+              "version": 1
+            },
+            "versions": [
+              1,
+              2
+            ],
+            "children": {
+              "2": [
+                "t3"
+              ]
+            },
+            "actor": "assistant"
+          },
+          "t3": {
+            "id": "t3",
+            "version": 1,
+            "parent": {
+              "id": "t2",
+              "version": 2
+            },
+            "versions": [
+              1
+            ],
+            "children": {},
+            "actor": "user"
+          }
+        },
+        "queries": [
+          {
+            "op": "chainFrom",
+            "arg": "t3",
+            "result": [
+              "t1#1",
+              "t2#2",
+              "t3#1"
+            ]
+          },
+          {
+            "op": "siblings",
+            "arg": "t2",
+            "result": [
+              "t2#2"
+            ]
+          },
+          {
+            "op": "branchInfo",
+            "arg": "t2",
+            "result": {
+              "versions": [
+                1,
+                2
+              ],
+              "currentIndex": 1,
+              "total": 2,
+              "hasPrev": true,
+              "hasNext": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "edit-head-switch",
+      "input": {
+        "turns": [
+          {
+            "id": "t1",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "t1-b1",
+                "key": "k-t1-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hello"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z"
+          },
+          {
+            "id": "t2",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "assistant",
+            "blocks": [
+              {
+                "id": "t2-b1",
+                "key": "k-t2-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hi"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t1",
+              "version": 1
+            }
+          },
+          {
+            "id": "t2",
+            "version": 2,
+            "session": "sess-1",
+            "actor": "assistant",
+            "blocks": [
+              {
+                "id": "t2-b2",
+                "key": "k-t2-2",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "hi (edited)"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t1",
+              "version": 1
+            }
+          },
+          {
+            "id": "t3",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "t3-b1",
+                "key": "k-t3-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "more"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t2",
+              "version": 2
+            }
+          },
+          {
+            "id": "t4",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "assistant",
+            "blocks": [
+              {
+                "id": "t4-b1",
+                "key": "k-t4-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "done"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "t3",
+              "version": 1
+            }
+          }
+        ],
+        "head": {
+          "id": "t4",
+          "version": 1
+        }
+      },
+      "expected": {
+        "head": {
+          "id": "t4",
+          "version": 1
+        },
+        "chain": [
+          "t1#1",
+          "t2#2",
+          "t3#1",
+          "t4#1"
+        ],
+        "nodes": {
+          "t1": {
+            "id": "t1",
+            "version": 1,
+            "parent": null,
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "t2"
+              ]
+            },
+            "actor": "user"
+          },
+          "t2": {
+            "id": "t2",
+            "version": 2,
+            "parent": {
+              "id": "t1",
+              "version": 1
+            },
+            "versions": [
+              1,
+              2
+            ],
+            "children": {
+              "2": [
+                "t3"
+              ]
+            },
+            "actor": "assistant"
+          },
+          "t3": {
+            "id": "t3",
+            "version": 1,
+            "parent": {
+              "id": "t2",
+              "version": 2
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "t4"
+              ]
+            },
+            "actor": "user"
+          },
+          "t4": {
+            "id": "t4",
+            "version": 1,
+            "parent": {
+              "id": "t3",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {},
+            "actor": "assistant"
+          }
+        },
+        "queries": [
+          {
+            "op": "branchInfo",
+            "arg": "t2",
+            "result": {
+              "versions": [
+                1,
+                2
+              ],
+              "currentIndex": 1,
+              "total": 2,
+              "hasPrev": true,
+              "hasNext": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "input": {
+        "turns": [],
+        "head": null
+      },
+      "expected": {
+        "head": null,
+        "chain": [],
+        "nodes": {},
+        "queries": [
+          {
+            "op": "chainFrom",
+            "arg": "missing",
+            "result": []
+          },
+          {
+            "op": "siblings",
+            "arg": "missing",
+            "result": []
+          },
+          {
+            "op": "branchInfo",
+            "arg": "missing",
+            "result": {
+              "versions": [],
+              "currentIndex": -1,
+              "total": 0,
+              "hasPrev": false,
+              "hasNext": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "two-roots",
+      "input": {
+        "turns": [
+          {
+            "id": "a",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "a-b1",
+                "key": "k-a-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "a"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z"
+          },
+          {
+            "id": "b",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "b-b1",
+                "key": "k-b-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "b"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z"
+          }
+        ],
+        "head": {
+          "id": "b",
+          "version": 1
+        }
+      },
+      "expected": {
+        "head": {
+          "id": "b",
+          "version": 1
+        },
+        "chain": [
+          "b#1"
+        ],
+        "nodes": {
+          "a": {
+            "id": "a",
+            "version": 1,
+            "parent": null,
+            "versions": [
+              1
+            ],
+            "children": {},
+            "actor": "user"
+          },
+          "b": {
+            "id": "b",
+            "version": 1,
+            "parent": null,
+            "versions": [
+              1
+            ],
+            "children": {},
+            "actor": "user"
+          }
+        },
+        "queries": [
+          {
+            "op": "siblings",
+            "arg": "a",
+            "result": [
+              "a#1",
+              "b#1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "deep-chain",
+      "input": {
+        "turns": [
+          {
+            "id": "d0",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d0-b1",
+                "key": "k-d0-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "0"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z"
+          },
+          {
+            "id": "d1",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d1-b1",
+                "key": "k-d1-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "1"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d0",
+              "version": 1
+            }
+          },
+          {
+            "id": "d2",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d2-b1",
+                "key": "k-d2-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "2"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d1",
+              "version": 1
+            }
+          },
+          {
+            "id": "d3",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d3-b1",
+                "key": "k-d3-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "3"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d2",
+              "version": 1
+            }
+          },
+          {
+            "id": "d4",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d4-b1",
+                "key": "k-d4-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "4"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d3",
+              "version": 1
+            }
+          },
+          {
+            "id": "d5",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d5-b1",
+                "key": "k-d5-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "5"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d4",
+              "version": 1
+            }
+          },
+          {
+            "id": "d6",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d6-b1",
+                "key": "k-d6-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "6"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d5",
+              "version": 1
+            }
+          },
+          {
+            "id": "d7",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d7-b1",
+                "key": "k-d7-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "7"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d6",
+              "version": 1
+            }
+          },
+          {
+            "id": "d8",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d8-b1",
+                "key": "k-d8-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "8"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d7",
+              "version": 1
+            }
+          },
+          {
+            "id": "d9",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d9-b1",
+                "key": "k-d9-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "9"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d8",
+              "version": 1
+            }
+          },
+          {
+            "id": "d10",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d10-b1",
+                "key": "k-d10-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "10"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d9",
+              "version": 1
+            }
+          },
+          {
+            "id": "d11",
+            "version": 1,
+            "session": "sess-1",
+            "actor": "user",
+            "blocks": [
+              {
+                "id": "d11-b1",
+                "key": "k-d11-1",
+                "type": "text",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "text": "11"
+                }
+              }
+            ],
+            "created": "2026-01-01T00:00:00.000Z",
+            "updated": "2026-01-01T00:00:00.000Z",
+            "parent": {
+              "id": "d10",
+              "version": 1
+            }
+          }
+        ],
+        "head": {
+          "id": "d11",
+          "version": 1
+        }
+      },
+      "expected": {
+        "head": {
+          "id": "d11",
+          "version": 1
+        },
+        "chain": [
+          "d0#1",
+          "d1#1",
+          "d2#1",
+          "d3#1",
+          "d4#1",
+          "d5#1",
+          "d6#1",
+          "d7#1",
+          "d8#1",
+          "d9#1",
+          "d10#1",
+          "d11#1"
+        ],
+        "nodes": {
+          "d0": {
+            "id": "d0",
+            "version": 1,
+            "parent": null,
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d1"
+              ]
+            },
+            "actor": "user"
+          },
+          "d1": {
+            "id": "d1",
+            "version": 1,
+            "parent": {
+              "id": "d0",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d2"
+              ]
+            },
+            "actor": "user"
+          },
+          "d10": {
+            "id": "d10",
+            "version": 1,
+            "parent": {
+              "id": "d9",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d11"
+              ]
+            },
+            "actor": "user"
+          },
+          "d11": {
+            "id": "d11",
+            "version": 1,
+            "parent": {
+              "id": "d10",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {},
+            "actor": "user"
+          },
+          "d2": {
+            "id": "d2",
+            "version": 1,
+            "parent": {
+              "id": "d1",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d3"
+              ]
+            },
+            "actor": "user"
+          },
+          "d3": {
+            "id": "d3",
+            "version": 1,
+            "parent": {
+              "id": "d2",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d4"
+              ]
+            },
+            "actor": "user"
+          },
+          "d4": {
+            "id": "d4",
+            "version": 1,
+            "parent": {
+              "id": "d3",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d5"
+              ]
+            },
+            "actor": "user"
+          },
+          "d5": {
+            "id": "d5",
+            "version": 1,
+            "parent": {
+              "id": "d4",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d6"
+              ]
+            },
+            "actor": "user"
+          },
+          "d6": {
+            "id": "d6",
+            "version": 1,
+            "parent": {
+              "id": "d5",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d7"
+              ]
+            },
+            "actor": "user"
+          },
+          "d7": {
+            "id": "d7",
+            "version": 1,
+            "parent": {
+              "id": "d6",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d8"
+              ]
+            },
+            "actor": "user"
+          },
+          "d8": {
+            "id": "d8",
+            "version": 1,
+            "parent": {
+              "id": "d7",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d9"
+              ]
+            },
+            "actor": "user"
+          },
+          "d9": {
+            "id": "d9",
+            "version": 1,
+            "parent": {
+              "id": "d8",
+              "version": 1
+            },
+            "versions": [
+              1
+            ],
+            "children": {
+              "1": [
+                "d10"
+              ]
+            },
+            "actor": "user"
+          }
+        },
+        "queries": [
+          {
+            "op": "chainFrom",
+            "arg": "d5",
+            "result": [
+              "d0#1",
+              "d1#1",
+              "d2#1",
+              "d3#1",
+              "d4#1",
+              "d5#1"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

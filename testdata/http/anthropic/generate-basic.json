@@ -1,0 +1,40 @@
+{
+  "name": "generate-basic",
+  "request": {
+    "method": "POST",
+    "path": "/v1/messages",
+    "headers": {
+      "x-api-key": "test-key",
+      "anthropic-version": "2023-06-01"
+    },
+    "body": {
+      "model": "claude-sonnet-4-5-20250929",
+      "max_tokens": 1024,
+      "system": "Be concise.",
+      "messages": [
+        {
+          "role": "user",
+          "content": [{ "type": "text", "text": "hello" }]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "request-id": "req_a1" },
+    "body": {
+      "id": "msg_01",
+      "model": "claude-sonnet-4-5-20250929",
+      "content": [{ "type": "text", "text": "Hi there." }],
+      "stop_reason": "end_turn",
+      "usage": { "input_tokens": 12, "output_tokens": 4 }
+    }
+  },
+  "expect": {
+    "finish": "stop",
+    "text": "Hi there.",
+    "input_tokens": 12,
+    "output_tokens": 4,
+    "request_id": "req_a1"
+  }
+}

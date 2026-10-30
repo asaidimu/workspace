@@ -1,0 +1,59 @@
+{
+  "name": "generate-tools",
+  "request": {
+    "method": "POST",
+    "path": "/v1/messages",
+    "headers": {
+      "x-api-key": "test-key",
+      "anthropic-version": "2023-06-01"
+    },
+    "body": {
+      "model": "claude-sonnet-4-5-20250929",
+      "max_tokens": 1024,
+      "system": "Be concise.",
+      "messages": [
+        {
+          "role": "user",
+          "content": [{ "type": "text", "text": "hello" }]
+        }
+      ],
+      "tools": [
+        {
+          "name": "getWeather",
+          "description": "Get current weather for a city.",
+          "input_schema": {
+            "type": "object",
+            "properties": { "city": { "type": "string" } },
+            "required": ["city"]
+          }
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "request-id": "req_a2" },
+    "body": {
+      "id": "msg_02",
+      "model": "claude-sonnet-4-5-20250929",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_1",
+          "name": "getWeather",
+          "input": { "city": "Nairobi" }
+        }
+      ],
+      "stop_reason": "tool_use",
+      "usage": { "input_tokens": 10, "output_tokens": 8 }
+    }
+  },
+  "expect": {
+    "finish": "tool_calls",
+    "tool_calls": [
+      { "id": "toolu_1", "name": "getWeather", "arguments": { "city": "Nairobi" } }
+    ],
+    "input_tokens": 10,
+    "output_tokens": 8
+  }
+}

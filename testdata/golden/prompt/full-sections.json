@@ -1,0 +1,84 @@
+{
+  "sections": [
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 1,
+      "body": "Be concise."
+    },
+    {
+      "id": "persona",
+      "title": "Persona",
+      "order": 4,
+      "body": "You are concise."
+    },
+    {
+      "id": "preferences",
+      "title": "User Preferences",
+      "order": 5,
+      "body": "- instruction of pref1"
+    },
+    {
+      "id": "context",
+      "title": "Context",
+      "order": 6,
+      "body": "{\"text\":\"body of pref-1\"}"
+    },
+    {
+      "id": "artifacts",
+      "title": "Artifacts",
+      "order": 7,
+      "body": "{\"text\":\"body of cfg-1\"}"
+    },
+    {
+      "id": "instructions",
+      "title": "Instructions",
+      "order": 8,
+      "body": "Cite sources."
+    }
+  ],
+  "system": [
+    "# Policy\nBe concise.\n\n---\n\n# Persona\nYou are concise.\n\n---\n\n# User Preferences\n- instruction of pref1\n\n---\n\n# Context\n{\"text\":\"body of pref-1\"}\n\n---\n\n# Artifacts\n{\"text\":\"body of cfg-1\"}\n\n---\n\n# Instructions\nCite sources."
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hello"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hi there"
+        }
+      ]
+    }
+  ],
+  "model": "test/model",
+  "max_output_tokens": 0,
+  "budget": {
+    "context_window": 8000,
+    "reserved_output": 800,
+    "used": 60
+  },
+  "diagnostics": [
+    {
+      "code": "token.approximate",
+      "message": "token counts are estimated as bytes/4 and are approximate"
+    },
+    {
+      "code": "content.conflict",
+      "message": "multiple sources offered pref1",
+      "ref": {
+        "key": "pref1",
+        "version": 1
+      }
+    }
+  ]
+}

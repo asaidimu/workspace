@@ -1,0 +1,22 @@
+{
+  "name": "error-400",
+  "request": {
+    "method": "POST",
+    "path": "/v1beta/models/gemini-2.5-pro:generateContent",
+    "headers": { "x-goog-api-key": "test-key" },
+    "body": {
+      "generationConfig": { "maxOutputTokens": 1024 },
+      "systemInstruction": { "role": "", "parts": [{ "text": "Be concise." }] },
+      "contents": [
+        { "role": "user", "parts": [{ "text": "hello" }] }
+      ]
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "error": { "code": 400, "message": "Invalid JSON payload received.", "status": "INVALID_ARGUMENT" }
+    }
+  },
+  "expect": { "error_status": 400, "error_type": "INVALID_ARGUMENT" }
+}

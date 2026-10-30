@@ -1,0 +1,11 @@
+{
+  "name": "greeting",
+  "match": { "model": "replay-model" },
+  "repeat": true,
+  "response": {
+    "parts": [{ "type": "text", "text": "Hello from replay." }],
+    "finish": "stop",
+    "usage": { "input_tokens": 12, "output_tokens": 6 },
+    "request_id": "replay-req-1"
+  }
+}

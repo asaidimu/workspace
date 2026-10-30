@@ -1,0 +1,717 @@
+{
+  "fixture": "prompt",
+  "ts": "@asaidimu/utils-workspace@9.0.0",
+  "cases": [
+    {
+      "name": "minimal",
+      "input": {
+        "provider": "testprov",
+        "prompt": {
+          "transcript": [
+            {
+              "id": "t1",
+              "version": 1,
+              "session": "s1",
+              "actor": "user",
+              "blocks": [
+                {
+                  "id": "id-k1",
+                  "key": "k1",
+                  "type": "text",
+                  "mode": "readwrite",
+                  "version": 0,
+                  "created": "2026-01-01T00:00:00.000Z",
+                  "updated": "2026-01-01T00:00:00.000Z",
+                  "topics": [],
+                  "value": {
+                    "text": "hello"
+                  }
+                }
+              ],
+              "created": "2026-01-01T00:00:00.000Z",
+              "updated": "2026-01-01T00:00:00.000Z"
+            }
+          ],
+          "results": []
+        },
+        "extensions": []
+      },
+      "expected": {
+        "sectionLabels": [
+          "operating-system",
+          "block-architecture",
+          "tools"
+        ],
+        "system": "# WORKSPACE OPERATING SYSTEM\nYou are operating within a structured workspace. Your output MUST be a JSON object matching the provided schema.\nYour entire response MUST be valid JSON. Nothing else.\n\n---\n\n# BLOCK TYPES & USAGE RULES\nYour response MUST be a JSON object with a `blocks` array.\nEach element of `blocks` must be one of the following types:\n\n## `text` blocks\n\nA standard block of text. Use this for natural language messages, answers, explanations, or any textual content that should be readable by the user.\n\n### Example block\n```json\n{\n  \"type\": \"text\",\n  \"text\": \"The quick brown fox jumps over the lazy dog.\"\n}\n```\n\n## `json` blocks\n\nA structured data block in JSON format. Use this for configuration, metadata, or any machine-readable structured data.\n\n### Example block\n```json\n{\n  \"type\": \"json\",\n  \"json\": { \"valid\": true }\n}\n```\n\n## BLOCK CONSTRAINTS\n- Output must be **valid JSON only** — no prose before or after the JSON object.\n- Responses may contain multiple blocks. Blocks are rendered in order.\n- **Do NOT generate IDs.** The workspace is solely responsible for block ID assignment.\n- Do not infer or invent fields not defined in the block schemas above.\n\n---\n\n# TOOL CAPABILITIES\nTools extend the assistant's capabilities beyond reasoning and conversation.\nA tool may provide one or more of the following capabilities:\n\n### Information Retrieval\nObtain information that is not present in the conversation context.\nExamples:\n* Web search\n* Database queries\n* Document retrieval\n* API lookups\n* Knowledge-base search\n\n---\n\n### Computation\nPerform deterministic calculations or transformations.\nExamples:\n* Mathematical calculations\n* Data analysis\n* Statistical operations\n* Code execution\n* File processing\n\n---\n\n### State Inspection\nRead the current state of an external system.\nExamples:\n* Checking account information\n* Reading application state\n* Retrieving configuration\n* Viewing logs\n* Listing files\n\n---\n\n### State Modification\nCreate, update, or delete data in an external system.\nExamples:\n* Creating records\n* Updating documents\n* Sending messages\n* Scheduling meetings\n* Writing files\n\n---\n\n### Side Effects\nPerform actions that have real-world consequences.\n\nExamples:\n* Sending emails\n* Triggering workflows\n* Publishing content\n* Deploying software\n* Executing transactions\n\n---\n\n### Specialized Intelligence\n\nProvide capabilities unavailable through normal reasoning.\n\nExamples:\n\n* Image generation\n* Speech synthesis\n* OCR\n* Geolocation services\n* Domain-specific engines\n\n---\n\n# TOOL SELECTION POLICY\n\nUse a tool when the user's goal would be better accomplished through the tool than through reasoning alone.\n\nInvoke a tool when:\n\n* The requested action falls within the tool's capabilities.\n* External information is required.\n* Fresh or real-time data is required.\n* Deterministic computation is required.\n* The user requests an action that affects an external system.\n* The tool materially improves accuracy, reliability, completeness, or efficiency.\n\nDo not invoke a tool when:\n\n* The answer can be provided accurately from existing context.\n* The tool is unrelated to the user's objective.\n* The tool provides no meaningful benefit.\n* The request is purely conversational.\n\n---\n\n# TOOL CHOICE PRINCIPLES\n\nWhen multiple tools could satisfy a request:\n\n1. Prefer the most specialized tool.\n2. Prefer the most reliable tool.\n3. Prefer the fewest number of tool calls.\n4. Prefer deterministic tools over generative tools.\n5. Prefer read-only operations before state-changing operations.\n6. Prefer lower-cost operations when equivalent.\n\n---\n\n# PRE-INVOCATION VALIDATION\n\nBefore invoking a tool:\n\n1. Verify the tool is relevant.\n2. Verify required parameters are available.\n3. Verify parameter values are valid.\n4. Determine whether user clarification is required.\n\nIf required information is missing:\n\n* Ask for clarification.\n* Do not guess required parameters.\n\n---\n\n# TOOL EXECUTION RULES\n\nWhen invoking a tool:\n\n* Use the exact tool schema.\n* Supply only supported parameters.\n* Do not invent fields.\n* Do not modify tool definitions.\n* Use the minimum input necessary to achieve the goal.\n\n---\n\n# POST-EXECUTION POLICY\n\nAfter receiving execution reports:\n1. Evaluate whether the user's objective has been satisfied.\n2. Use the results as the source of truth.\n3. Decide whether additional tool use is necessary.\n4. Respond to the user if the task is complete.\n\nTool results may inform reasoning but must not be altered or fabricated.\n\n---\n\n# MULTI-STEP EXECUTION\n\nA task may require multiple tool invocations.\n\nFollow this cycle:\n\n1. Understand the goal.\n2. Select the best next action.\n3. Invoke a tool if needed.\n4. Observe the result.\n5. Reassess the goal.\n6. Repeat until complete.\n\nDo not invoke tools unnecessarily.\n\n---\n\n# SAFETY RULES\nNever:\n* Invent tool names.\n* Invent tool outputs.\n* Claim a tool was used when it was not.\n* Ignore tool errors.\n* Execute unavailable tools.\n* Bypass required parameters.\n* Modify tool schemas.\n\nIf a tool fails:\n\n* Explain the failure.\n* Request missing information if appropriate.\n* Attempt an alternative approach only if it is valid and available.\n\n---\n\n# DEFAULT ASSUMPTION\nReason first.\nUse tools only when they provide information, computation, capabilities, or actions that reasoning alone cannot reliably provide.\n\n\n# TOOL INVOCATION\n\nUse this exact format to invoke tools:\n\n```json\n{\n  \"type\": \"tool:<tool_name>\",\n  \"parameters\": <parameters>\n}\n```\n\n# AVAILABLE TOOLS\nOnly use tools listed below.\n\n*tool:getWeather*\nDescription: Get current weather for a city.\nExample:\n```json\n{\n  \"type\": \"tool:getWeather\",\n  \"parameters\": {\n    \"city\": \"Nairobi\"\n  }\n}\n```",
+        "transcript": [
+          {
+            "id": "t1",
+            "version": 1,
+            "actor": "user",
+            "parts": [
+              {
+                "kind": "text",
+                "text": "hello"
+              }
+            ]
+          }
+        ],
+        "schema": {
+          "type": "object",
+          "description": "The model's structured response, containing an ordered sequence of content blocks.",
+          "properties": {
+            "blocks": {
+              "type": "array",
+              "description": "An ordered array of content blocks comprising the model's response.",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "text"
+                        ]
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "json"
+                        ]
+                      },
+                      "json": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "json"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "tool:getWeather"
+                        ]
+                      },
+                      "parameters": {
+                        "type": "object",
+                        "properties": {
+                          "city": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "city"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "parameters"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "blocks"
+          ]
+        },
+        "logs": []
+      }
+    },
+    {
+      "name": "full-sections",
+      "input": {
+        "provider": "testprov",
+        "prompt": {
+          "system": {
+            "persona": "You are a concise assistant.",
+            "preferences": [
+              {
+                "key": "p1",
+                "value": {
+                  "instruction": "Always answer in metric units."
+                }
+              },
+              {
+                "key": "p2",
+                "value": {}
+              }
+            ],
+            "content": [
+              {
+                "id": "id-pref-1",
+                "key": "pref-1",
+                "type": "preference",
+                "mode": "read",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "instruction": "Prefer British English."
+                }
+              },
+              {
+                "id": "id-cfg-1",
+                "key": "cfg-1",
+                "type": "json",
+                "mode": "readwrite",
+                "version": 0,
+                "created": "2026-01-01T00:00:00.000Z",
+                "updated": "2026-01-01T00:00:00.000Z",
+                "topics": [],
+                "value": {
+                  "json": {
+                    "theme": "dark"
+                  }
+                }
+              }
+            ],
+            "instructions": "Cite sources."
+          },
+          "transcript": [
+            {
+              "id": "t1",
+              "version": 1,
+              "session": "s1",
+              "actor": "user",
+              "blocks": [
+                {
+                  "id": "id-k1",
+                  "key": "k1",
+                  "type": "text",
+                  "mode": "readwrite",
+                  "version": 0,
+                  "created": "2026-01-01T00:00:00.000Z",
+                  "updated": "2026-01-01T00:00:00.000Z",
+                  "topics": [],
+                  "value": {
+                    "text": "hello"
+                  }
+                }
+              ],
+              "created": "2026-01-01T00:00:00.000Z",
+              "updated": "2026-01-01T00:00:00.000Z"
+            }
+          ],
+          "results": []
+        },
+        "extensions": []
+      },
+      "expected": {
+        "sectionLabels": [
+          "operating-system",
+          "block-architecture",
+          "tools",
+          "persona",
+          "preferences",
+          "context",
+          "artifacts",
+          "instructions"
+        ],
+        "system": "# WORKSPACE OPERATING SYSTEM\nYou are operating within a structured workspace. Your output MUST be a JSON object matching the provided schema.\nYour entire response MUST be valid JSON. Nothing else.\n\n---\n\n# BLOCK TYPES & USAGE RULES\nYour response MUST be a JSON object with a `blocks` array.\nEach element of `blocks` must be one of the following types:\n\n## `text` blocks\n\nA standard block of text. Use this for natural language messages, answers, explanations, or any textual content that should be readable by the user.\n\n### Example block\n```json\n{\n  \"type\": \"text\",\n  \"text\": \"The quick brown fox jumps over the lazy dog.\"\n}\n```\n\n## `json` blocks\n\nA structured data block in JSON format. Use this for configuration, metadata, or any machine-readable structured data.\n\n### Example block\n```json\n{\n  \"type\": \"json\",\n  \"json\": { \"valid\": true }\n}\n```\n\n## BLOCK CONSTRAINTS\n- Output must be **valid JSON only** — no prose before or after the JSON object.\n- Responses may contain multiple blocks. Blocks are rendered in order.\n- **Do NOT generate IDs.** The workspace is solely responsible for block ID assignment.\n- Do not infer or invent fields not defined in the block schemas above.\n\n---\n\n# TOOL CAPABILITIES\nTools extend the assistant's capabilities beyond reasoning and conversation.\nA tool may provide one or more of the following capabilities:\n\n### Information Retrieval\nObtain information that is not present in the conversation context.\nExamples:\n* Web search\n* Database queries\n* Document retrieval\n* API lookups\n* Knowledge-base search\n\n---\n\n### Computation\nPerform deterministic calculations or transformations.\nExamples:\n* Mathematical calculations\n* Data analysis\n* Statistical operations\n* Code execution\n* File processing\n\n---\n\n### State Inspection\nRead the current state of an external system.\nExamples:\n* Checking account information\n* Reading application state\n* Retrieving configuration\n* Viewing logs\n* Listing files\n\n---\n\n### State Modification\nCreate, update, or delete data in an external system.\nExamples:\n* Creating records\n* Updating documents\n* Sending messages\n* Scheduling meetings\n* Writing files\n\n---\n\n### Side Effects\nPerform actions that have real-world consequences.\n\nExamples:\n* Sending emails\n* Triggering workflows\n* Publishing content\n* Deploying software\n* Executing transactions\n\n---\n\n### Specialized Intelligence\n\nProvide capabilities unavailable through normal reasoning.\n\nExamples:\n\n* Image generation\n* Speech synthesis\n* OCR\n* Geolocation services\n* Domain-specific engines\n\n---\n\n# TOOL SELECTION POLICY\n\nUse a tool when the user's goal would be better accomplished through the tool than through reasoning alone.\n\nInvoke a tool when:\n\n* The requested action falls within the tool's capabilities.\n* External information is required.\n* Fresh or real-time data is required.\n* Deterministic computation is required.\n* The user requests an action that affects an external system.\n* The tool materially improves accuracy, reliability, completeness, or efficiency.\n\nDo not invoke a tool when:\n\n* The answer can be provided accurately from existing context.\n* The tool is unrelated to the user's objective.\n* The tool provides no meaningful benefit.\n* The request is purely conversational.\n\n---\n\n# TOOL CHOICE PRINCIPLES\n\nWhen multiple tools could satisfy a request:\n\n1. Prefer the most specialized tool.\n2. Prefer the most reliable tool.\n3. Prefer the fewest number of tool calls.\n4. Prefer deterministic tools over generative tools.\n5. Prefer read-only operations before state-changing operations.\n6. Prefer lower-cost operations when equivalent.\n\n---\n\n# PRE-INVOCATION VALIDATION\n\nBefore invoking a tool:\n\n1. Verify the tool is relevant.\n2. Verify required parameters are available.\n3. Verify parameter values are valid.\n4. Determine whether user clarification is required.\n\nIf required information is missing:\n\n* Ask for clarification.\n* Do not guess required parameters.\n\n---\n\n# TOOL EXECUTION RULES\n\nWhen invoking a tool:\n\n* Use the exact tool schema.\n* Supply only supported parameters.\n* Do not invent fields.\n* Do not modify tool definitions.\n* Use the minimum input necessary to achieve the goal.\n\n---\n\n# POST-EXECUTION POLICY\n\nAfter receiving execution reports:\n1. Evaluate whether the user's objective has been satisfied.\n2. Use the results as the source of truth.\n3. Decide whether additional tool use is necessary.\n4. Respond to the user if the task is complete.\n\nTool results may inform reasoning but must not be altered or fabricated.\n\n---\n\n# MULTI-STEP EXECUTION\n\nA task may require multiple tool invocations.\n\nFollow this cycle:\n\n1. Understand the goal.\n2. Select the best next action.\n3. Invoke a tool if needed.\n4. Observe the result.\n5. Reassess the goal.\n6. Repeat until complete.\n\nDo not invoke tools unnecessarily.\n\n---\n\n# SAFETY RULES\nNever:\n* Invent tool names.\n* Invent tool outputs.\n* Claim a tool was used when it was not.\n* Ignore tool errors.\n* Execute unavailable tools.\n* Bypass required parameters.\n* Modify tool schemas.\n\nIf a tool fails:\n\n* Explain the failure.\n* Request missing information if appropriate.\n* Attempt an alternative approach only if it is valid and available.\n\n---\n\n# DEFAULT ASSUMPTION\nReason first.\nUse tools only when they provide information, computation, capabilities, or actions that reasoning alone cannot reliably provide.\n\n\n# TOOL INVOCATION\n\nUse this exact format to invoke tools:\n\n```json\n{\n  \"type\": \"tool:<tool_name>\",\n  \"parameters\": <parameters>\n}\n```\n\n# AVAILABLE TOOLS\nOnly use tools listed below.\n\n*tool:getWeather*\nDescription: Get current weather for a city.\nExample:\n```json\n{\n  \"type\": \"tool:getWeather\",\n  \"parameters\": {\n    \"city\": \"Nairobi\"\n  }\n}\n```\n\n---\n\n# Persona\nYou are a concise assistant.\n\n---\n\n# User Preferences\n- Always answer in metric units.\n\n---\n\n# Context\n\n[pref-1]\nPrefer British English.\n\n---\n\n# Artifacts\n\n[cfg-1]\n```json\n{\n  \"json\": {\n    \"theme\": \"dark\"\n  }\n}\n```\n\n---\n\n# Instructions\nCite sources.",
+        "transcript": [
+          {
+            "id": "t1",
+            "version": 1,
+            "actor": "user",
+            "parts": [
+              {
+                "kind": "text",
+                "text": "hello"
+              }
+            ]
+          }
+        ],
+        "schema": {
+          "type": "object",
+          "description": "The model's structured response, containing an ordered sequence of content blocks.",
+          "properties": {
+            "blocks": {
+              "type": "array",
+              "description": "An ordered array of content blocks comprising the model's response.",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "text"
+                        ]
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "json"
+                        ]
+                      },
+                      "json": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "json"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "tool:getWeather"
+                        ]
+                      },
+                      "parameters": {
+                        "type": "object",
+                        "properties": {
+                          "city": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "city"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "parameters"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "blocks"
+          ]
+        },
+        "logs": [
+          "warn:Preference block \"p2\" has no instruction."
+        ]
+      }
+    },
+    {
+      "name": "extension-anchors",
+      "input": {
+        "provider": "testprov",
+        "prompt": {
+          "system": {
+            "persona": "Persona."
+          },
+          "transcript": [
+            {
+              "id": "t1",
+              "version": 1,
+              "session": "s1",
+              "actor": "user",
+              "blocks": [
+                {
+                  "id": "id-k1",
+                  "key": "k1",
+                  "type": "text",
+                  "mode": "readwrite",
+                  "version": 0,
+                  "created": "2026-01-01T00:00:00.000Z",
+                  "updated": "2026-01-01T00:00:00.000Z",
+                  "topics": [],
+                  "value": {
+                    "text": "hi"
+                  }
+                }
+              ],
+              "created": "2026-01-01T00:00:00.000Z",
+              "updated": "2026-01-01T00:00:00.000Z"
+            }
+          ],
+          "results": []
+        },
+        "extensions": [
+          {
+            "position": "prepend",
+            "label": "company",
+            "content": "Company policy."
+          },
+          {
+            "position": "before:persona",
+            "label": "legal",
+            "content": "Legal notice."
+          },
+          {
+            "position": "after:tools",
+            "label": "toolpolicy",
+            "content": "Tool policy."
+          },
+          {
+            "position": "append",
+            "label": "footer",
+            "content": "Footer."
+          },
+          {
+            "position": "before:does-not-exist",
+            "label": "orphan",
+            "content": "Orphan."
+          }
+        ]
+      },
+      "expected": {
+        "sectionLabels": [
+          "company",
+          "operating-system",
+          "block-architecture",
+          "tools",
+          "toolpolicy",
+          "legal",
+          "persona",
+          "footer",
+          "orphan"
+        ],
+        "system": "Company policy.\n\n---\n\n# WORKSPACE OPERATING SYSTEM\nYou are operating within a structured workspace. Your output MUST be a JSON object matching the provided schema.\nYour entire response MUST be valid JSON. Nothing else.\n\n---\n\n# BLOCK TYPES & USAGE RULES\nYour response MUST be a JSON object with a `blocks` array.\nEach element of `blocks` must be one of the following types:\n\n## `text` blocks\n\nA standard block of text. Use this for natural language messages, answers, explanations, or any textual content that should be readable by the user.\n\n### Example block\n```json\n{\n  \"type\": \"text\",\n  \"text\": \"The quick brown fox jumps over the lazy dog.\"\n}\n```\n\n## `json` blocks\n\nA structured data block in JSON format. Use this for configuration, metadata, or any machine-readable structured data.\n\n### Example block\n```json\n{\n  \"type\": \"json\",\n  \"json\": { \"valid\": true }\n}\n```\n\n## BLOCK CONSTRAINTS\n- Output must be **valid JSON only** — no prose before or after the JSON object.\n- Responses may contain multiple blocks. Blocks are rendered in order.\n- **Do NOT generate IDs.** The workspace is solely responsible for block ID assignment.\n- Do not infer or invent fields not defined in the block schemas above.\n\n---\n\n# TOOL CAPABILITIES\nTools extend the assistant's capabilities beyond reasoning and conversation.\nA tool may provide one or more of the following capabilities:\n\n### Information Retrieval\nObtain information that is not present in the conversation context.\nExamples:\n* Web search\n* Database queries\n* Document retrieval\n* API lookups\n* Knowledge-base search\n\n---\n\n### Computation\nPerform deterministic calculations or transformations.\nExamples:\n* Mathematical calculations\n* Data analysis\n* Statistical operations\n* Code execution\n* File processing\n\n---\n\n### State Inspection\nRead the current state of an external system.\nExamples:\n* Checking account information\n* Reading application state\n* Retrieving configuration\n* Viewing logs\n* Listing files\n\n---\n\n### State Modification\nCreate, update, or delete data in an external system.\nExamples:\n* Creating records\n* Updating documents\n* Sending messages\n* Scheduling meetings\n* Writing files\n\n---\n\n### Side Effects\nPerform actions that have real-world consequences.\n\nExamples:\n* Sending emails\n* Triggering workflows\n* Publishing content\n* Deploying software\n* Executing transactions\n\n---\n\n### Specialized Intelligence\n\nProvide capabilities unavailable through normal reasoning.\n\nExamples:\n\n* Image generation\n* Speech synthesis\n* OCR\n* Geolocation services\n* Domain-specific engines\n\n---\n\n# TOOL SELECTION POLICY\n\nUse a tool when the user's goal would be better accomplished through the tool than through reasoning alone.\n\nInvoke a tool when:\n\n* The requested action falls within the tool's capabilities.\n* External information is required.\n* Fresh or real-time data is required.\n* Deterministic computation is required.\n* The user requests an action that affects an external system.\n* The tool materially improves accuracy, reliability, completeness, or efficiency.\n\nDo not invoke a tool when:\n\n* The answer can be provided accurately from existing context.\n* The tool is unrelated to the user's objective.\n* The tool provides no meaningful benefit.\n* The request is purely conversational.\n\n---\n\n# TOOL CHOICE PRINCIPLES\n\nWhen multiple tools could satisfy a request:\n\n1. Prefer the most specialized tool.\n2. Prefer the most reliable tool.\n3. Prefer the fewest number of tool calls.\n4. Prefer deterministic tools over generative tools.\n5. Prefer read-only operations before state-changing operations.\n6. Prefer lower-cost operations when equivalent.\n\n---\n\n# PRE-INVOCATION VALIDATION\n\nBefore invoking a tool:\n\n1. Verify the tool is relevant.\n2. Verify required parameters are available.\n3. Verify parameter values are valid.\n4. Determine whether user clarification is required.\n\nIf required information is missing:\n\n* Ask for clarification.\n* Do not guess required parameters.\n\n---\n\n# TOOL EXECUTION RULES\n\nWhen invoking a tool:\n\n* Use the exact tool schema.\n* Supply only supported parameters.\n* Do not invent fields.\n* Do not modify tool definitions.\n* Use the minimum input necessary to achieve the goal.\n\n---\n\n# POST-EXECUTION POLICY\n\nAfter receiving execution reports:\n1. Evaluate whether the user's objective has been satisfied.\n2. Use the results as the source of truth.\n3. Decide whether additional tool use is necessary.\n4. Respond to the user if the task is complete.\n\nTool results may inform reasoning but must not be altered or fabricated.\n\n---\n\n# MULTI-STEP EXECUTION\n\nA task may require multiple tool invocations.\n\nFollow this cycle:\n\n1. Understand the goal.\n2. Select the best next action.\n3. Invoke a tool if needed.\n4. Observe the result.\n5. Reassess the goal.\n6. Repeat until complete.\n\nDo not invoke tools unnecessarily.\n\n---\n\n# SAFETY RULES\nNever:\n* Invent tool names.\n* Invent tool outputs.\n* Claim a tool was used when it was not.\n* Ignore tool errors.\n* Execute unavailable tools.\n* Bypass required parameters.\n* Modify tool schemas.\n\nIf a tool fails:\n\n* Explain the failure.\n* Request missing information if appropriate.\n* Attempt an alternative approach only if it is valid and available.\n\n---\n\n# DEFAULT ASSUMPTION\nReason first.\nUse tools only when they provide information, computation, capabilities, or actions that reasoning alone cannot reliably provide.\n\n\n# TOOL INVOCATION\n\nUse this exact format to invoke tools:\n\n```json\n{\n  \"type\": \"tool:<tool_name>\",\n  \"parameters\": <parameters>\n}\n```\n\n# AVAILABLE TOOLS\nOnly use tools listed below.\n\n*tool:getWeather*\nDescription: Get current weather for a city.\nExample:\n```json\n{\n  \"type\": \"tool:getWeather\",\n  \"parameters\": {\n    \"city\": \"Nairobi\"\n  }\n}\n```\n\n---\n\nTool policy.\n\n---\n\nLegal notice.\n\n---\n\n# Persona\nPersona.\n\n---\n\nFooter.\n\n---\n\nOrphan.",
+        "transcript": [
+          {
+            "id": "t1",
+            "version": 1,
+            "actor": "user",
+            "parts": [
+              {
+                "kind": "text",
+                "text": "hi"
+              }
+            ]
+          }
+        ],
+        "schema": {
+          "type": "object",
+          "description": "The model's structured response, containing an ordered sequence of content blocks.",
+          "properties": {
+            "blocks": {
+              "type": "array",
+              "description": "An ordered array of content blocks comprising the model's response.",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "text"
+                        ]
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "json"
+                        ]
+                      },
+                      "json": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "json"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "tool:getWeather"
+                        ]
+                      },
+                      "parameters": {
+                        "type": "object",
+                        "properties": {
+                          "city": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "city"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "parameters"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "blocks"
+          ]
+        },
+        "logs": [
+          "warn:Extension anchor label \"does-not-exist\" not found, appending to end."
+        ]
+      }
+    },
+    {
+      "name": "transcript-mapping",
+      "input": {
+        "provider": "testprov",
+        "prompt": {
+          "transcript": [
+            {
+              "id": "t1",
+              "version": 1,
+              "session": "s1",
+              "actor": "user",
+              "blocks": [
+                {
+                  "id": "id-k1",
+                  "key": "k1",
+                  "type": "text",
+                  "mode": "readwrite",
+                  "version": 0,
+                  "created": "2026-01-01T00:00:00.000Z",
+                  "updated": "2026-01-01T00:00:00.000Z",
+                  "topics": [],
+                  "value": {
+                    "text": "hello"
+                  }
+                },
+                {
+                  "id": "id-th1",
+                  "key": "th1",
+                  "type": "thinking",
+                  "mode": "internal",
+                  "version": 0,
+                  "created": "2026-01-01T00:00:00.000Z",
+                  "updated": "2026-01-01T00:00:00.000Z",
+                  "topics": [],
+                  "value": {
+                    "thinking": "wondering"
+                  }
+                }
+              ],
+              "created": "2026-01-01T00:00:00.000Z",
+              "updated": "2026-01-01T00:00:00.000Z"
+            },
+            {
+              "id": "t2",
+              "version": 1,
+              "session": "s1",
+              "actor": "assistant",
+              "blocks": [
+                {
+                  "id": "id-k2",
+                  "key": "k2",
+                  "type": "json",
+                  "mode": "readwrite",
+                  "version": 0,
+                  "created": "2026-01-01T00:00:00.000Z",
+                  "updated": "2026-01-01T00:00:00.000Z",
+                  "topics": [],
+                  "value": {
+                    "json": {
+                      "a": 1
+                    }
+                  }
+                }
+              ],
+              "created": "2026-01-01T00:00:00.000Z",
+              "updated": "2026-01-01T00:00:00.000Z",
+              "parent": {
+                "id": "t1",
+                "version": 1
+              }
+            }
+          ],
+          "results": [
+            {
+              "id": "id-r1",
+              "key": "r1",
+              "type": "text",
+              "mode": "readwrite",
+              "version": 0,
+              "created": "2026-01-01T00:00:00.000Z",
+              "updated": "2026-01-01T00:00:00.000Z",
+              "topics": [],
+              "value": {
+                "text": "tool says hi"
+              }
+            }
+          ]
+        },
+        "extensions": []
+      },
+      "expected": {
+        "sectionLabels": [
+          "operating-system",
+          "block-architecture",
+          "tools"
+        ],
+        "system": "# WORKSPACE OPERATING SYSTEM\nYou are operating within a structured workspace. Your output MUST be a JSON object matching the provided schema.\nYour entire response MUST be valid JSON. Nothing else.\n\n---\n\n# BLOCK TYPES & USAGE RULES\nYour response MUST be a JSON object with a `blocks` array.\nEach element of `blocks` must be one of the following types:\n\n## `text` blocks\n\nA standard block of text. Use this for natural language messages, answers, explanations, or any textual content that should be readable by the user.\n\n### Example block\n```json\n{\n  \"type\": \"text\",\n  \"text\": \"The quick brown fox jumps over the lazy dog.\"\n}\n```\n\n## `json` blocks\n\nA structured data block in JSON format. Use this for configuration, metadata, or any machine-readable structured data.\n\n### Example block\n```json\n{\n  \"type\": \"json\",\n  \"json\": { \"valid\": true }\n}\n```\n\n## BLOCK CONSTRAINTS\n- Output must be **valid JSON only** — no prose before or after the JSON object.\n- Responses may contain multiple blocks. Blocks are rendered in order.\n- **Do NOT generate IDs.** The workspace is solely responsible for block ID assignment.\n- Do not infer or invent fields not defined in the block schemas above.\n\n---\n\n# TOOL CAPABILITIES\nTools extend the assistant's capabilities beyond reasoning and conversation.\nA tool may provide one or more of the following capabilities:\n\n### Information Retrieval\nObtain information that is not present in the conversation context.\nExamples:\n* Web search\n* Database queries\n* Document retrieval\n* API lookups\n* Knowledge-base search\n\n---\n\n### Computation\nPerform deterministic calculations or transformations.\nExamples:\n* Mathematical calculations\n* Data analysis\n* Statistical operations\n* Code execution\n* File processing\n\n---\n\n### State Inspection\nRead the current state of an external system.\nExamples:\n* Checking account information\n* Reading application state\n* Retrieving configuration\n* Viewing logs\n* Listing files\n\n---\n\n### State Modification\nCreate, update, or delete data in an external system.\nExamples:\n* Creating records\n* Updating documents\n* Sending messages\n* Scheduling meetings\n* Writing files\n\n---\n\n### Side Effects\nPerform actions that have real-world consequences.\n\nExamples:\n* Sending emails\n* Triggering workflows\n* Publishing content\n* Deploying software\n* Executing transactions\n\n---\n\n### Specialized Intelligence\n\nProvide capabilities unavailable through normal reasoning.\n\nExamples:\n\n* Image generation\n* Speech synthesis\n* OCR\n* Geolocation services\n* Domain-specific engines\n\n---\n\n# TOOL SELECTION POLICY\n\nUse a tool when the user's goal would be better accomplished through the tool than through reasoning alone.\n\nInvoke a tool when:\n\n* The requested action falls within the tool's capabilities.\n* External information is required.\n* Fresh or real-time data is required.\n* Deterministic computation is required.\n* The user requests an action that affects an external system.\n* The tool materially improves accuracy, reliability, completeness, or efficiency.\n\nDo not invoke a tool when:\n\n* The answer can be provided accurately from existing context.\n* The tool is unrelated to the user's objective.\n* The tool provides no meaningful benefit.\n* The request is purely conversational.\n\n---\n\n# TOOL CHOICE PRINCIPLES\n\nWhen multiple tools could satisfy a request:\n\n1. Prefer the most specialized tool.\n2. Prefer the most reliable tool.\n3. Prefer the fewest number of tool calls.\n4. Prefer deterministic tools over generative tools.\n5. Prefer read-only operations before state-changing operations.\n6. Prefer lower-cost operations when equivalent.\n\n---\n\n# PRE-INVOCATION VALIDATION\n\nBefore invoking a tool:\n\n1. Verify the tool is relevant.\n2. Verify required parameters are available.\n3. Verify parameter values are valid.\n4. Determine whether user clarification is required.\n\nIf required information is missing:\n\n* Ask for clarification.\n* Do not guess required parameters.\n\n---\n\n# TOOL EXECUTION RULES\n\nWhen invoking a tool:\n\n* Use the exact tool schema.\n* Supply only supported parameters.\n* Do not invent fields.\n* Do not modify tool definitions.\n* Use the minimum input necessary to achieve the goal.\n\n---\n\n# POST-EXECUTION POLICY\n\nAfter receiving execution reports:\n1. Evaluate whether the user's objective has been satisfied.\n2. Use the results as the source of truth.\n3. Decide whether additional tool use is necessary.\n4. Respond to the user if the task is complete.\n\nTool results may inform reasoning but must not be altered or fabricated.\n\n---\n\n# MULTI-STEP EXECUTION\n\nA task may require multiple tool invocations.\n\nFollow this cycle:\n\n1. Understand the goal.\n2. Select the best next action.\n3. Invoke a tool if needed.\n4. Observe the result.\n5. Reassess the goal.\n6. Repeat until complete.\n\nDo not invoke tools unnecessarily.\n\n---\n\n# SAFETY RULES\nNever:\n* Invent tool names.\n* Invent tool outputs.\n* Claim a tool was used when it was not.\n* Ignore tool errors.\n* Execute unavailable tools.\n* Bypass required parameters.\n* Modify tool schemas.\n\nIf a tool fails:\n\n* Explain the failure.\n* Request missing information if appropriate.\n* Attempt an alternative approach only if it is valid and available.\n\n---\n\n# DEFAULT ASSUMPTION\nReason first.\nUse tools only when they provide information, computation, capabilities, or actions that reasoning alone cannot reliably provide.\n\n\n# TOOL INVOCATION\n\nUse this exact format to invoke tools:\n\n```json\n{\n  \"type\": \"tool:<tool_name>\",\n  \"parameters\": <parameters>\n}\n```\n\n# AVAILABLE TOOLS\nOnly use tools listed below.\n\n*tool:getWeather*\nDescription: Get current weather for a city.\nExample:\n```json\n{\n  \"type\": \"tool:getWeather\",\n  \"parameters\": {\n    \"city\": \"Nairobi\"\n  }\n}\n```",
+        "transcript": [
+          {
+            "id": "t1",
+            "version": 1,
+            "actor": "user",
+            "parts": [
+              {
+                "kind": "text",
+                "text": "hello"
+              },
+              {
+                "kind": "text",
+                "text": "tool says hi"
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "version": 1,
+            "actor": "assistant",
+            "parts": [
+              {
+                "kind": "json",
+                "data": {
+                  "a": 1
+                }
+              },
+              {
+                "kind": "text",
+                "text": "tool says hi"
+              }
+            ]
+          }
+        ],
+        "schema": {
+          "type": "object",
+          "description": "The model's structured response, containing an ordered sequence of content blocks.",
+          "properties": {
+            "blocks": {
+              "type": "array",
+              "description": "An ordered array of content blocks comprising the model's response.",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "text"
+                        ]
+                      },
+                      "text": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "json"
+                        ]
+                      },
+                      "json": {
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "json"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "tool:getWeather"
+                        ]
+                      },
+                      "parameters": {
+                        "type": "object",
+                        "properties": {
+                          "city": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "city"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "parameters"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "blocks"
+          ]
+        },
+        "logs": []
+      }
+    }
+  ]
+}

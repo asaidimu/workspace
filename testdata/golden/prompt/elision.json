@@ -1,0 +1,31 @@
+{
+  "sections": [
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 1,
+      "body": "Be concise."
+    }
+  ],
+  "system": [
+    "# Policy\nBe concise."
+  ],
+  "messages": [
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hi there"
+        }
+      ]
+    }
+  ],
+  "model": "test/model",
+  "max_output_tokens": 5,
+  "budget": {
+    "context_window": 25,
+    "reserved_output": 5,
+    "used": 20
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "name": "stream-tools",
+  "request": {
+    "method": "POST",
+    "path": "/v1beta/models/gemini-2.5-pro:streamGenerateContent",
+    "headers": {
+      "x-goog-api-key": "test-key"
+    },
+    "body": {
+      "generationConfig": {
+        "maxOutputTokens": 1024
+      },
+      "systemInstruction": {
+        "role": "",
+        "parts": [
+          {
+            "text": "Be concise."
+          }
+        ]
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "functionDeclarations": [
+            {
+              "name": "getWeather",
+              "description": "weather",
+              "parameters": {
+                "type": "object"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body_text": "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"functionCall\":{\"name\":\"getWeather\",\"args\":{\"city\":\"Nairobi\"}}}]},\"finishReason\":\"STOP\",\"index\":0}],\"usageMetadata\":{\"promptTokenCount\":9,\"candidatesTokenCount\":7,\"totalTokenCount\":16}}\n\n"
+  },
+  "expect": {
+    "stream": [
+      {
+        "kind": "part_started",
+        "index": 0
+      },
+      {
+        "kind": "part_delta",
+        "index": 0,
+        "delta": "{\"city\":\"Nairobi\"}"
+      },
+      {
+        "kind": "part_done",
+        "index": 0,
+        "tool_id": "getWeather",
+        "tool_name": "getWeather",
+        "arguments": "{\"city\":\"Nairobi\"}"
+      },
+      {
+        "kind": "usage",
+        "input_tokens": 9,
+        "output_tokens": 7
+      },
+      {
+        "kind": "finished",
+        "finish": "tool_calls"
+      }
+    ]
+  }
+}

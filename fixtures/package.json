@@ -1,0 +1,15 @@
+{
+  "name": "fixtures",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "@asaidimu/utils-workspace": "9.0.0"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "stream-tools",
+  "request": {
+    "method": "POST",
+    "path": "/v1/messages",
+    "headers": {
+      "x-api-key": "test-key",
+      "anthropic-version": "2023-06-01"
+    },
+    "body": {
+      "model": "claude-sonnet-4-5-20250929",
+      "max_tokens": 1024,
+      "system": "Be concise.",
+      "stream": true,
+      "messages": [
+        {
+          "role": "user",
+          "content": [{ "type": "text", "text": "hello" }]
+        }
+      ],
+      "tools": [
+        {
+          "name": "getWeather",
+          "description": "weather",
+          "input_schema": { "type": "object" }
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body_text": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_s2\",\"usage\":{\"input_tokens\":9}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_9\",\"name\":\"getWeather\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"city\\\":\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"\\\"Nairobi\\\"}\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"output_tokens\":7}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+  },
+  "expect": {
+    "stream": [
+      { "kind": "usage", "input_tokens": 9 },
+      { "kind": "part_started", "index": 0 },
+      { "kind": "part_delta", "index": 0, "delta": "{\"city\":" },
+      { "kind": "part_delta", "index": 0, "delta": "\"Nairobi\"}" },
+      { "kind": "part_done", "index": 0, "tool_id": "toolu_9", "tool_name": "getWeather", "arguments": "{\"city\":\"Nairobi\"}" },
+      { "kind": "usage", "output_tokens": 7 },
+      { "kind": "finished", "finish": "tool_calls" }
+    ]
+  }
+}

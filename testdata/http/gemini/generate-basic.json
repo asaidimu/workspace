@@ -1,0 +1,41 @@
+{
+  "name": "generate-basic",
+  "request": {
+    "method": "POST",
+    "path": "/v1beta/models/gemini-2.5-pro:generateContent",
+    "headers": { "x-goog-api-key": "test-key" },
+    "body": {
+      "generationConfig": { "maxOutputTokens": 1024 },
+      "systemInstruction": { "role": "", "parts": [{ "text": "Be concise." }] },
+      "contents": [
+        { "role": "user", "parts": [{ "text": "hello" }] }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "candidates": [
+        {
+          "content": { "role": "model", "parts": [{ "text": "Hi there." }] },
+          "finishReason": "STOP",
+          "index": 0
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 12,
+        "candidatesTokenCount": 4,
+        "totalTokenCount": 16
+      },
+      "modelVersion": "gemini-2.5-pro",
+      "responseId": "resp-g1"
+    }
+  },
+  "expect": {
+    "finish": "stop",
+    "text": "Hi there.",
+    "input_tokens": 12,
+    "output_tokens": 4,
+    "request_id": "resp-g1"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "slow-generate",
+  "match": { "model": "replay-model", "contains": "SLOW_GENERATE" },
+  "delay_ms": 60000,
+  "response": {
+    "parts": [{ "type": "text", "text": "too late" }],
+    "finish": "stop"
+  }
+}

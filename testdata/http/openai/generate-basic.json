@@ -1,0 +1,39 @@
+{
+  "name": "generate-basic",
+  "request": {
+    "method": "POST",
+    "path": "/v1/chat/completions",
+    "headers": { "Authorization": "Bearer test-key" },
+    "body": {
+      "model": "gpt-5",
+      "max_completion_tokens": 1024,
+      "messages": [
+        { "role": "system", "content": "Be concise." },
+        { "role": "user", "content": [{ "type": "text", "text": "hello" }] }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "x-request-id": "req_o1" },
+    "body": {
+      "id": "chatcmpl-1",
+      "model": "gpt-5",
+      "choices": [
+        {
+          "index": 0,
+          "message": { "role": "assistant", "content": "Hi there." },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": { "prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 16 }
+    }
+  },
+  "expect": {
+    "finish": "stop",
+    "text": "Hi there.",
+    "input_tokens": 12,
+    "output_tokens": 4,
+    "request_id": "req_o1"
+  }
+}

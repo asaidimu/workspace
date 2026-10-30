@@ -1,0 +1,86 @@
+{
+  "sections": [
+    {
+      "id": "company",
+      "title": "company",
+      "order": 0,
+      "body": "Company policy."
+    },
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 1,
+      "body": "Be concise."
+    },
+    {
+      "id": "postpol",
+      "title": "postpol",
+      "order": 2,
+      "body": "Post policy."
+    },
+    {
+      "id": "legal",
+      "title": "legal",
+      "order": 3,
+      "body": "Legal notice."
+    },
+    {
+      "id": "persona",
+      "title": "Persona",
+      "order": 4,
+      "body": "Persona."
+    },
+    {
+      "id": "footer",
+      "title": "footer",
+      "order": 9,
+      "body": "Footer."
+    },
+    {
+      "id": "orphan",
+      "title": "orphan",
+      "order": 9,
+      "body": "Orphan."
+    }
+  ],
+  "system": [
+    "# company\nCompany policy.\n\n---\n\n# Policy\nBe concise.\n\n---\n\n# postpol\nPost policy.\n\n---\n\n# legal\nLegal notice.\n\n---\n\n# Persona\nPersona.\n\n---\n\n# footer\nFooter.\n\n---\n\n# orphan\nOrphan."
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hello"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hi there"
+        }
+      ]
+    }
+  ],
+  "model": "test/model",
+  "max_output_tokens": 0,
+  "budget": {
+    "context_window": 8000,
+    "reserved_output": 800,
+    "used": 49
+  },
+  "diagnostics": [
+    {
+      "code": "token.approximate",
+      "message": "token counts are estimated as bytes/4 and are approximate"
+    },
+    {
+      "code": "extension.anchor",
+      "message": "extension anchor \"does-not-exist\" not found; appending to end"
+    }
+  ]
+}

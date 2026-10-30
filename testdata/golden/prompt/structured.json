@@ -1,0 +1,65 @@
+{
+  "sections": [
+    {
+      "id": "operating-system",
+      "title": "",
+      "order": -1,
+      "body": "# WORKSPACE OPERATING SYSTEM\nYou are operating within a structured workspace. Your output MUST be a JSON object matching the provided schema.\nYour entire response MUST be valid JSON. Nothing else."
+    },
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 1,
+      "body": "Be concise."
+    },
+    {
+      "id": "tools",
+      "title": "",
+      "order": 2,
+      "body": "## search\nfind things\n```json\n{\"type\":\"object\",\"properties\":{\"q\":{\"type\":\"string\"}},\"required\":[\"q\"]}\n```"
+    },
+    {
+      "id": "blocks",
+      "title": "",
+      "order": 3,
+      "body": "# BLOCK TYPES \u0026 USAGE RULES\nYour response MUST be a JSON object with a `blocks` array.\nEach element of `blocks` must be one of the following types:\n\ntext: plain or markdown text\n\njson: structured data\n\n## BLOCK CONSTRAINTS\n- Output must be **valid JSON only** — no prose before or after the JSON object.\n- Responses may contain multiple blocks. Blocks are rendered in order.\n- **Do NOT generate IDs.** The workspace is solely responsible for block ID assignment.\n- Do not infer or invent fields not defined in the block schemas above."
+    }
+  ],
+  "system": [
+    "# WORKSPACE OPERATING SYSTEM\nYou are operating within a structured workspace. Your output MUST be a JSON object matching the provided schema.\nYour entire response MUST be valid JSON. Nothing else.\n\n---\n\n# Policy\nBe concise.\n\n---\n\n## search\nfind things\n```json\n{\"type\":\"object\",\"properties\":{\"q\":{\"type\":\"string\"}},\"required\":[\"q\"]}\n```\n\n---\n\n# BLOCK TYPES \u0026 USAGE RULES\nYour response MUST be a JSON object with a `blocks` array.\nEach element of `blocks` must be one of the following types:\n\ntext: plain or markdown text\n\njson: structured data\n\n## BLOCK CONSTRAINTS\n- Output must be **valid JSON only** — no prose before or after the JSON object.\n- Responses may contain multiple blocks. Blocks are rendered in order.\n- **Do NOT generate IDs.** The workspace is solely responsible for block ID assignment.\n- Do not infer or invent fields not defined in the block schemas above."
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hello"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hi there"
+        }
+      ]
+    }
+  ],
+  "output_schema": "{\"type\":\"object\",\"properties\":{\"blocks\":{\"type\":\"array\"}},\"required\":[\"blocks\"]}",
+  "model": "test/model",
+  "max_output_tokens": 0,
+  "budget": {
+    "context_window": 8000,
+    "reserved_output": 800,
+    "used": 224
+  },
+  "diagnostics": [
+    {
+      "code": "token.approximate",
+      "message": "token counts are estimated as bytes/4 and are approximate"
+    }
+  ]
+}

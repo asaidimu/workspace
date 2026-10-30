@@ -1,0 +1,69 @@
+{
+  "name": "stream-basic",
+  "request": {
+    "method": "POST",
+    "path": "/v1beta/models/gemini-2.5-pro:streamGenerateContent",
+    "headers": {
+      "x-goog-api-key": "test-key"
+    },
+    "body": {
+      "generationConfig": {
+        "maxOutputTokens": 1024
+      },
+      "systemInstruction": {
+        "role": "",
+        "parts": [
+          {
+            "text": "Be concise."
+          }
+        ]
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "hello"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body_text": "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"Hello\"}]},\"index\":0}]}\n\ndata: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\" world\"}]},\"index\":0}]}\n\ndata: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[]},\"finishReason\":\"STOP\",\"index\":0}],\"usageMetadata\":{\"promptTokenCount\":12,\"candidatesTokenCount\":5,\"totalTokenCount\":17},\"responseId\":\"resp-g3\"}\n\n"
+  },
+  "expect": {
+    "stream": [
+      {
+        "kind": "part_started",
+        "index": 0
+      },
+      {
+        "kind": "part_delta",
+        "index": 0,
+        "delta": "Hello"
+      },
+      {
+        "kind": "part_delta",
+        "index": 0,
+        "delta": " world"
+      },
+      {
+        "kind": "part_done",
+        "index": 0,
+        "text": "Hello world"
+      },
+      {
+        "kind": "usage",
+        "input_tokens": 12,
+        "output_tokens": 5
+      },
+      {
+        "kind": "finished",
+        "finish": "stop"
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "streaming",
+  "match": { "model": "replay-model", "contains": "STREAM_ME" },
+  "events": [
+    { "kind": "part_started", "index": 0 },
+    { "kind": "part_delta", "index": 0, "delta": "Hello" },
+    { "kind": "part_delta", "index": 0, "delta": " world" },
+    { "kind": "part_done", "index": 0, "part": { "type": "text", "text": "Hello world" } },
+    { "kind": "usage", "usage": { "input_tokens": 9, "output_tokens": 4 } },
+    { "kind": "finished", "finish": "stop" }
+  ]
+}

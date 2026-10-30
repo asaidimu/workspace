@@ -1,0 +1,182 @@
+{
+  "caps": [
+    {
+      "name": "document",
+      "consumable": true,
+      "emittable": true
+    },
+    {
+      "name": "file",
+      "consumable": true,
+      "emittable": false
+    },
+    {
+      "name": "image",
+      "consumable": true,
+      "emittable": false
+    },
+    {
+      "name": "json",
+      "consumable": true,
+      "emittable": true
+    },
+    {
+      "name": "preference",
+      "consumable": true,
+      "emittable": false
+    },
+    {
+      "name": "text",
+      "consumable": true,
+      "emittable": true
+    },
+    {
+      "name": "thinking",
+      "consumable": false,
+      "emittable": true
+    },
+    {
+      "name": "tool_call",
+      "consumable": false,
+      "emittable": true
+    },
+    {
+      "name": "tool_result",
+      "consumable": true,
+      "emittable": false
+    },
+    {
+      "name": "unknown",
+      "consumable": false,
+      "emittable": false
+    }
+  ],
+  "parse": {
+    "blocks": [
+      {
+        "type": "text",
+        "key": "k1",
+        "value": {
+          "text": "hello"
+        },
+        "raw": {
+          "text": "hello"
+        }
+      },
+      {
+        "type": "json",
+        "key": "k2",
+        "value": {
+          "a": 1
+        },
+        "raw": {
+          "a": 1
+        }
+      },
+      {
+        "type": "tool_call",
+        "key": "k3",
+        "value": {
+          "call_id": "c1",
+          "name": "getWeather",
+          "arguments": {
+            "city": "Nairobi"
+          }
+        },
+        "raw": {
+          "call_id": "c1",
+          "name": "getWeather",
+          "arguments": {
+            "city": "Nairobi"
+          }
+        }
+      },
+      {
+        "type": "tool_result",
+        "key": "k4",
+        "value": {
+          "call_id": "c1",
+          "output": {
+            "temp": 25
+          }
+        },
+        "raw": {
+          "call_id": "c1",
+          "output": {
+            "temp": 25
+          },
+          "is_error": false
+        }
+      },
+      {
+        "type": "unknown",
+        "key": "k5",
+        "value": {
+          "originalType": "acme.chart",
+          "raw": {
+            "Key": "k5",
+            "Type": "acme.chart",
+            "Value": {
+              "series": [
+                1,
+                2,
+                3
+              ]
+            }
+          }
+        },
+        "raw": {
+          "Type": "acme.chart",
+          "Key": "k5",
+          "Value": {
+            "series": [
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      },
+      {
+        "type": "unknown",
+        "key": "k6",
+        "value": {
+          "originalType": "text",
+          "raw": {
+            "Key": "k6",
+            "Type": "text",
+            "Value": {
+              "text": 42
+            }
+          }
+        },
+        "raw": {
+          "Type": "text",
+          "Key": "k6",
+          "Value": {
+            "text": 42
+          }
+        }
+      }
+    ],
+    "diagnostics": [
+      {
+        "block_index": 4,
+        "code": "unknown_type",
+        "issue_count": 0
+      },
+      {
+        "block_index": 5,
+        "code": "invalid",
+        "issue_count": 1
+      }
+    ]
+  },
+  "renders": {
+    "json": "{\"a\":1}",
+    "preference": "style: Always be kind",
+    "text": "hello world",
+    "tool_call": "[call_1] Tool Call: getWeather({\"city\":\"Nairobi\"})",
+    "tool_result": "[call_1] Tool Result: {\"temp\":25}"
+  }
+}

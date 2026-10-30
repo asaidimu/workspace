@@ -1,0 +1,12 @@
+{
+  "name": "tool-call",
+  "match": { "model": "replay-model", "contains": "CALL_ME" },
+  "response": {
+    "parts": [
+      { "type": "text", "text": "Let me look that up." },
+      { "type": "tool_call", "call_id": "call-1", "name": "lookup", "arguments": {"q": "CALL_ME"} }
+    ],
+    "finish": "tool_calls",
+    "usage": { "input_tokens": 20, "output_tokens": 14 }
+  }
+}

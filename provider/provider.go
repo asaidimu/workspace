@@ -1,0 +1,219 @@
+// Package provider defines the one interface every model sits behind. It
+// streams typed events, calls tools natively, reports usage and never leaks
+// vendor types into the core.
+//
+// The prompt pipeline produces a Request, the adapter talks to the vendor,
+// and the agent loop consumes the Stream. Adapters use plain net/http and
+// one shared SSE decoder; vendor SDKs are not required.
+package provider
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"time"
+)
+
+// Capabilities is what one model can do. Requests using a capability the
+// model lacks fail fast, since downgrading is the prompt pipeline's job.
+type Capabilities struct {
+	Streaming        bool
+	NativeTools      bool
+	StructuredOutput bool
+	Vision           bool
+	PDF              bool
+	Thinking         bool
+	FileUpload       bool
+	PromptCaching    bool
+	ContextWindow    int
+	MaxOutputTokens  int
+}
+
+// Source is a readable file to send to a provider.
+type Source interface {
+	Open(ctx context.Context) (io.ReadCloser, error)
+	Size() int64
+	MediaType() string
+}
+
+// Part is one piece of a message. The sealed method keeps the set closed.
+type Part interface {
+	part()
+}
+
+// TextPart is plain or markdown text.
+type TextPart struct{ Text string }
+
+// ImagePart is an image, either from a Source or already uploaded (RemoteID).
+type ImagePart struct {
+	Source   Source
+	RemoteID string // set when the file was uploaded to this provider
+}
+
+// FilePart is any other file, same remote/source split as ImagePart.
+type FilePart struct {
+	Name     string
+	Source   Source
+	RemoteID string
+}
+
+// ThinkingPart is a reasoning trace, stored for display and dropped on a
+// provider switch unless the provider requires it.
+type ThinkingPart struct {
+	Text      string
+	Signature string
+}
+
+// ToolCallPart is a request to run a tool. It is complete only at PartDone;
+// argument fragments are exposed as deltas for UIs and are never executed.
+type ToolCallPart struct {
+	CallID    string
+	Name      string
+	Arguments json.RawMessage
+}
+
+// ToolResultPart is the output of a tool call.
+type ToolResultPart struct {
+	CallID  string
+	Output  json.RawMessage
+	IsError bool
+}
+
+func (TextPart) part()       {}
+func (ImagePart) part()      {}
+func (FilePart) part()       {}
+func (ThinkingPart) part()   {}
+func (ToolCallPart) part()   {}
+func (ToolResultPart) part() {}
+
+// Role is the speaker of a message.
+type Role int
+
+const (
+	UserRole Role = iota
+	AssistantRole
+	ToolRole
+)
+
+// Message is one turn of the transcript as the provider sees it.
+type Message struct {
+	Role  Role
+	Parts []Part
+}
+
+// ToolSpec advertises a callable tool to the model.
+type ToolSpec struct {
+	Name        string
+	Description string
+	Schema      json.RawMessage
+}
+
+// Request is what the pipeline hands the adapter.
+type Request struct {
+	Model           string
+	System          []Part
+	Messages        []Message
+	Tools           []ToolSpec
+	OutputSchema    json.RawMessage
+	MaxOutputTokens int
+	Temperature     *float64
+	Stop            []string
+	Metadata        map[string]string
+}
+
+// Usage is what a call consumed. Estimated is set when the vendor reported
+// no usage and the tokenizer's estimate is stored instead.
+type Usage struct {
+	InputTokens     int
+	OutputTokens    int
+	CachedTokens    int
+	ReasoningTokens int
+	Estimated       bool
+}
+
+// FinishReason is why the model stopped.
+type FinishReason string
+
+const (
+	FinishStop          FinishReason = "stop"
+	FinishLength        FinishReason = "length"
+	FinishToolCalls     FinishReason = "tool_calls"
+	FinishContentFilter FinishReason = "content_filter"
+	FinishError         FinishReason = "error"
+)
+
+// Response is the non-streaming result of a Generate call.
+type Response struct {
+	Message           Message
+	Usage             Usage
+	Finish            FinishReason
+	Model             string
+	ProviderRequestID string
+}
+
+// EventKind is the sort of streaming event.
+type EventKind int
+
+const (
+	PartStarted EventKind = iota
+	PartDelta
+	PartDone
+	UsageReported
+	Finished
+)
+
+// Event is one streamed update. Delta carries a text or argument fragment;
+// Part carries the complete part on PartDone.
+type Event struct {
+	Kind   EventKind
+	Index  int // part index within the message
+	Delta  string
+	Part   Part
+	Usage  *Usage
+	Finish FinishReason
+}
+
+// Stream is a running Generate. Recv returns io.EOF after Finished, and
+// Close is safe at any time. Cancelling the context closes the HTTP body.
+type Stream interface {
+	Recv() (Event, error)
+	Close() error
+}
+
+// Pricing is a vendor's list price, in micro-units of the vendor's currency
+// (usually USD) per million tokens.
+type Pricing struct {
+	Currency            string
+	InputMicrosPerMTok  int64
+	OutputMicrosPerMTok int64
+	CachedMicrosPerMTok int64
+}
+
+// ModelInfo describes one model.
+type ModelInfo struct {
+	ID           string
+	Capabilities Capabilities
+	Pricing      Pricing
+}
+
+// RemoteFile is a copy of a file the provider now holds.
+type RemoteFile struct {
+	ID        string
+	ExpiresAt time.Time // zero when it does not expire
+}
+
+// Provider is the vendor-neutral model interface.
+type Provider interface {
+	Name() string
+	Models(ctx context.Context) ([]ModelInfo, error)
+	Capabilities(model string) (Capabilities, error)
+	Generate(ctx context.Context, req Request) (Response, error)
+	Stream(ctx context.Context, req Request) (Stream, error)
+	UploadFile(ctx context.Context, src Source, name string) (RemoteFile, error)
+}
+
+// CredentialSource yields a provider's API key. Keys are never stored in the
+// store and never logged.
+type CredentialSource interface {
+	Credential(ctx context.Context, providerName string) (string, error)
+}

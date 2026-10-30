@@ -1,0 +1,11 @@
+{
+  "name": "streaming-slow",
+  "match": { "model": "replay-model", "contains": "SLOW_STREAM" },
+  "events": [
+    { "kind": "part_started", "index": 0 },
+    { "kind": "part_delta", "index": 0, "delta": "first" },
+    { "kind": "part_delta", "index": 0, "delta": " second", "delay_ms": 30000 },
+    { "kind": "part_done", "index": 0, "part": { "type": "text", "text": "first second" } },
+    { "kind": "finished", "finish": "stop" }
+  ]
+}

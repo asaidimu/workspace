@@ -1,0 +1,36 @@
+{
+  "name": "error-400",
+  "request": {
+    "method": "POST",
+    "path": "/v1/messages",
+    "headers": {
+      "x-api-key": "test-key",
+      "anthropic-version": "2023-06-01"
+    },
+    "body": {
+      "model": "claude-sonnet-4-5-20250929",
+      "max_tokens": 1024,
+      "system": "Be concise.",
+      "messages": [
+        {
+          "role": "user",
+          "content": [{ "type": "text", "text": "hello" }]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "type": "error",
+      "error": {
+        "type": "invalid_request_error",
+        "message": "max_tokens: required"
+      }
+    }
+  },
+  "expect": {
+    "error_status": 400,
+    "error_type": "invalid_request_error"
+  }
+}

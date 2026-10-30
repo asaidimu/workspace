@@ -1,0 +1,80 @@
+{
+  "sections": [
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 1,
+      "body": "Be concise."
+    }
+  ],
+  "system": [
+    "# Policy\nBe concise."
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "weather?"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "tool_call",
+          "call_id": "c1",
+          "name": "getWeather",
+          "arguments": {}
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "parts": [
+        {
+          "kind": "tool_result",
+          "call_id": "c1",
+          "output": "sunny"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "parts": []
+    },
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "{\"a\":1}"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "[image omitted]"
+        }
+      ]
+    }
+  ],
+  "model": "test/model",
+  "max_output_tokens": 0,
+  "budget": {
+    "context_window": 8000,
+    "reserved_output": 800,
+    "used": 18
+  },
+  "diagnostics": [
+    {
+      "code": "token.approximate",
+      "message": "token counts are estimated as bytes/4 and are approximate"
+    }
+  ]
+}

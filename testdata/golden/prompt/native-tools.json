@@ -1,0 +1,53 @@
+{
+  "sections": [
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 1,
+      "body": "Be concise."
+    }
+  ],
+  "system": [
+    "# Policy\nBe concise."
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hello"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "hi there"
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "name": "search",
+      "description": "find things",
+      "schema": "{\"type\":\"object\",\"properties\":{\"q\":{\"type\":\"string\"}}}"
+    }
+  ],
+  "model": "test/model",
+  "max_output_tokens": 0,
+  "budget": {
+    "context_window": 8000,
+    "reserved_output": 800,
+    "used": 9
+  },
+  "diagnostics": [
+    {
+      "code": "token.approximate",
+      "message": "token counts are estimated as bytes/4 and are approximate"
+    }
+  ]
+}

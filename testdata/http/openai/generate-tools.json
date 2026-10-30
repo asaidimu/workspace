@@ -1,0 +1,64 @@
+{
+  "name": "generate-tools",
+  "request": {
+    "method": "POST",
+    "path": "/v1/chat/completions",
+    "headers": { "Authorization": "Bearer test-key" },
+    "body": {
+      "model": "gpt-5",
+      "max_completion_tokens": 1024,
+      "messages": [
+        { "role": "system", "content": "Be concise." },
+        { "role": "user", "content": [{ "type": "text", "text": "hello" }] }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "getWeather",
+            "description": "Get current weather for a city.",
+            "parameters": {
+              "type": "object",
+              "properties": { "city": { "type": "string" } },
+              "required": ["city"]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "x-request-id": "req_o2" },
+    "body": {
+      "id": "chatcmpl-2",
+      "model": "gpt-5",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "call_1",
+                "type": "function",
+                "function": { "name": "getWeather", "arguments": "{\"city\":\"Nairobi\"}" }
+              }
+            ]
+          },
+          "finish_reason": "tool_calls"
+        }
+      ],
+      "usage": { "prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18 }
+    }
+  },
+  "expect": {
+    "finish": "tool_calls",
+    "tool_calls": [
+      { "id": "call_1", "name": "getWeather", "arguments": { "city": "Nairobi" } }
+    ],
+    "input_tokens": 10,
+    "output_tokens": 8
+  }
+}

@@ -1,0 +1,249 @@
+{
+  "fixture": "registry",
+  "ts": "@asaidimu/utils-workspace@9.0.0",
+  "cases": [
+    {
+      "name": "default-types-modes",
+      "input": {},
+      "expected": {
+        "text": {
+          "mode": "readwrite",
+          "flags": {
+            "consumable": true,
+            "emittable": true
+          }
+        },
+        "preference": {
+          "mode": "read",
+          "flags": {
+            "consumable": true,
+            "emittable": false
+          }
+        },
+        "json": {
+          "mode": "readwrite",
+          "flags": {
+            "consumable": true,
+            "emittable": true
+          }
+        },
+        "blob": {
+          "mode": "read",
+          "flags": {
+            "consumable": true,
+            "emittable": false
+          }
+        },
+        "image": {
+          "mode": "internal",
+          "flags": {
+            "consumable": false,
+            "emittable": false
+          }
+        },
+        "document": {
+          "mode": "internal",
+          "flags": {
+            "consumable": false,
+            "emittable": false
+          }
+        },
+        "thinking": {
+          "mode": "internal",
+          "flags": {
+            "consumable": false,
+            "emittable": false
+          }
+        },
+        "tool:call": {
+          "mode": "internal",
+          "flags": {
+            "consumable": false,
+            "emittable": false
+          }
+        },
+        "tool:result": {
+          "mode": "internal",
+          "flags": {
+            "consumable": false,
+            "emittable": false
+          }
+        },
+        "tool:report": {
+          "mode": "read",
+          "flags": {
+            "consumable": true,
+            "emittable": false
+          }
+        },
+        "unknown": {
+          "mode": "internal",
+          "flags": {
+            "consumable": false,
+            "emittable": false
+          }
+        }
+      }
+    },
+    {
+      "name": "tool-call-regex-fallback",
+      "input": {
+        "keys": [
+          "tool:getWeather",
+          "tool:call",
+          "tool:execute",
+          "tool:result",
+          "tool:report",
+          "text"
+        ]
+      },
+      "expected": {
+        "toolCallRegex": {
+          "tool:getWeather": true,
+          "tool:call": false,
+          "tool:execute": false
+        },
+        "resolvedType": {
+          "tool:getWeather": "tool:call",
+          "tool:call": "tool:call",
+          "tool:execute": null,
+          "tool:result": "tool:result",
+          "tool:report": "tool:report",
+          "text": "text"
+        }
+      }
+    },
+    {
+      "name": "parse-unknown-and-unmapped",
+      "input": {
+        "knownRaw": {
+          "type": "text",
+          "text": "hello"
+        },
+        "unknownRaw": {
+          "type": "acme.chart",
+          "series": [
+            1,
+            2,
+            3
+          ]
+        },
+        "providerId": "openai"
+      },
+      "expected": {
+        "known": {
+          "type": "unknown",
+          "mode": "internal",
+          "value": {
+            "raw": {
+              "type": "text",
+              "text": "hello"
+            },
+            "originalType": "text"
+          }
+        },
+        "unknown": {
+          "type": "unknown",
+          "mode": "internal",
+          "value": {
+            "raw": {
+              "type": "acme.chart",
+              "series": [
+                1,
+                2,
+                3
+              ]
+            },
+            "originalType": "acme.chart"
+          }
+        }
+      }
+    },
+    {
+      "name": "parse-provider-mapping",
+      "input": {
+        "raw": {
+          "type": "acme.card",
+          "title": "T"
+        },
+        "providerId": "openai"
+      },
+      "expected": {
+        "type": "acme.card",
+        "mapped": true
+      }
+    },
+    {
+      "name": "schema-emittable-exclude-tool-call",
+      "input": {
+        "filter": {
+          "exclude": [
+            "tool:call"
+          ]
+        }
+      },
+      "expected": {
+        "required": [
+          "blocks"
+        ],
+        "emittableTypes": [
+          "acme.card",
+          "json",
+          "text"
+        ]
+      }
+    },
+    {
+      "name": "instance-filter-flags",
+      "input": {
+        "types": [
+          "text",
+          "preference",
+          "thinking"
+        ]
+      },
+      "expected": {
+        "consumable": [
+          "preference",
+          "text"
+        ],
+        "emittable": [
+          "text"
+        ]
+      }
+    },
+    {
+      "name": "process-tool-call-commands",
+      "input": {
+        "blockType": "tool:call",
+        "key": "call_1"
+      },
+      "expected": {
+        "count": 1,
+        "first": {
+          "type": "tool:execute",
+          "payload": {
+            "name": "getWeather",
+            "parameters": {
+              "city": "Nairobi"
+            },
+            "key": "call_1"
+          }
+        }
+      }
+    },
+    {
+      "name": "format-renderers",
+      "input": {},
+      "expected": {
+        "text": "hello world",
+        "preference": "[k2]\nAlways be kind",
+        "toolCall": "[call_1] Tool Call: getWeather({\"city\":\"Nairobi\"})",
+        "toolResult": "[call_1] Tool Result (getWeather): {\"temp\":25}",
+        "toolError": "[call_2] Tool Error (getWeather): not found",
+        "image": null,
+        "unknown": null
+      }
+    }
+  ]
+}

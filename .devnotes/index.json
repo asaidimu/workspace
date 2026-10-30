@@ -1,0 +1,443 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-19T14:56:00.98391564Z",
+  "root": ".",
+  "notes": {
+    "32kfv8": {
+      "id": "32kfv8",
+      "category": "issue",
+      "status": "open",
+      "title": "Inefficient data access",
+      "body": "Anansi provides a powerfull and flexible query language. Here we\nread all rows, then count them in memory. This problem might be\nduplicated elsewhere.\nAnansi also provides a sensible default for the id property, enforced\nas chronological, uuidv7s. This allows efficient sorting of data\nSee other issues relating to subpar solutions to problems already\nsolved by anansi.\n",
+      "location": {
+        "file": "store/anansistore/blobs.go",
+        "startLine": 380,
+        "startCol": 2,
+        "endLine": 388,
+        "endCol": 3
+      },
+      "hash": "b8371abc5e5b8a4a"
+    },
+    "7wsf3d": {
+      "id": "7wsf3d",
+      "category": "issue",
+      "status": "open",
+      "title": "Lack of schema tags",
+      "body": "None of these domain types have schema tags, which means\nnone of them benefit from anansi's schema utilities such\nas efficient json roundtrips and validators for data in\neither json bytes or map forms.\nAnansi being the intended data layer for this library, this is a very big issue.\nTags are cheap in that they are metadata and do not import\nanything.\nThis omission causes further problems down the line\n",
+      "references": [
+        "#ctp1dk"
+      ],
+      "location": {
+        "file": "domain/domain.go",
+        "startLine": 13,
+        "startCol": 3,
+        "endLine": 23,
+        "endCol": 3
+      },
+      "hash": "1908d50c32a2af02"
+    },
+    "c0nyaq": {
+      "id": "c0nyaq",
+      "category": "issue",
+      "status": "open",
+      "title": "Replicated pattern",
+      "references": [
+        "#ctp1dk"
+      ],
+      "location": {
+        "file": "store/anansistore/contents.go",
+        "startLine": 18,
+        "startCol": 3,
+        "endLine": 19,
+        "endCol": 3
+      },
+      "hash": "02d61e06044f8c1d"
+    },
+    "c0nyvq": {
+      "id": "c0nyvq",
+      "category": "issue",
+      "status": "open",
+      "title": "Replicated pattern",
+      "references": [
+        "#ctp1dk"
+      ],
+      "location": {
+        "file": "store/anansistore/contents.go",
+        "startLine": 43,
+        "startCol": 3,
+        "endLine": 44,
+        "endCol": 3
+      },
+      "hash": "016395b106311058"
+    },
+    "ctp1dk": {
+      "id": "ctp1dk",
+      "category": "issue",
+      "status": "open",
+      "title": "Manual struct binding?",
+      "body": "Anansi has utilities to automatically bind documents to\nstructs. Check data.Documenter.d.BindToTag()\nThis problem seems to be replicated in all repositories\n",
+      "location": {
+        "file": "store/anansistore/blobs.go",
+        "startLine": 20,
+        "startCol": 3,
+        "endLine": 24,
+        "endCol": 3
+      },
+      "hash": "8bb2bd59c25af3ea"
+    },
+    "hnpcoz": {
+      "id": "hnpcoz",
+      "category": "todo",
+      "status": "open",
+      "title": "Replace this bus with a more robust implementation",
+      "body": "This bus suffices for now, but we should consider using a better version\n",
+      "location": {
+        "file": "kernel/bus.go",
+        "startLine": 7,
+        "startCol": 3,
+        "endLine": 9,
+        "endCol": 3
+      },
+      "hash": "9edcc72d090e9a31"
+    },
+    "ple99i": {
+      "id": "ple99i",
+      "category": "issue",
+      "status": "open",
+      "title": "Use of depracated interfaces.",
+      "body": "Anansi has deprecated data.Document. Prefer the more\nrobust document.Document\n",
+      "location": {
+        "file": "store/anansistore/blobs.go",
+        "startLine": 52,
+        "startCol": 3,
+        "endLine": 55,
+        "endCol": 3
+      },
+      "hash": "8a603fea7f892328"
+    },
+    "shzrsh": {
+      "id": "shzrsh",
+      "category": "issue",
+      "status": "open",
+      "title": "Duplication of effort",
+      "body": "This implementation, which attempts to derive an anansi schema for\nany go type should be rightfully moved into the anansi library itself.\nOtherwise, in this codebase, we should prefer defining anansi tags for our\ncontent\n",
+      "references": [
+        "#7wsf3d"
+      ],
+      "location": {
+        "file": "content/schema_for.go",
+        "startLine": 29,
+        "startCol": 3,
+        "endLine": 35,
+        "endCol": 3
+      },
+      "hash": "cdc5911a23c58ee1"
+    },
+    "z18thn": {
+      "id": "z18thn",
+      "category": "issue",
+      "status": "open",
+      "title": "Performance Cost",
+      "body": "What exactly is the performance footprint of this callback.\nLoading all records into memory to check for a duplicate is\npotentially wastefull.\nConsider a unique index on the checksum field instead to push\ncost down to the persistence layer\n",
+      "location": {
+        "file": "store/anansistore/blobs.go",
+        "startLine": 99,
+        "startCol": 3,
+        "endLine": 105,
+        "endCol": 3
+      },
+      "hash": "a4839353fd3dc0eb"
+    }
+  },
+  "files": {
+    "agent/agent.go": {
+      "hash": "5e2272deb04dd178"
+    },
+    "agent/manager.go": {
+      "hash": "61d73add5fd1a034"
+    },
+    "agent/manager_test.go": {
+      "hash": "254eb5b9911d46c1"
+    },
+    "agent/registry.go": {
+      "hash": "66030ebfb04873cb"
+    },
+    "agent/registry_test.go": {
+      "hash": "e5713de15e1f4463"
+    },
+    "agent/step.go": {
+      "hash": "d83c5217fa6fba7f"
+    },
+    "agent/step_test.go": {
+      "hash": "f749c5ae902e9264"
+    },
+    "agent/tool.go": {
+      "hash": "0f5cc6b965689737"
+    },
+    "agent/tool_test.go": {
+      "hash": "df9f81a39dbd55fa"
+    },
+    "agent/zz_dbg_test.go": {
+      "hash": "790a9c8649a4e588"
+    },
+    "blob/blob.go": {
+      "hash": "8933c82baf5c28a2"
+    },
+    "blob/reconcile.go": {
+      "hash": "454870ff01b82af4"
+    },
+    "blob/reconcile_test.go": {
+      "hash": "8b47c6d88d97c914"
+    },
+    "boundary/boundary_test.go": {
+      "hash": "013044a11d8e6798"
+    },
+    "commands.go": {
+      "hash": "6dea844001d71377"
+    },
+    "content/content.go": {
+      "hash": "8c2e2936c1602b64"
+    },
+    "content/jsonschema.go": {
+      "hash": "152bee828edc40c3"
+    },
+    "content/jsonschema_test.go": {
+      "hash": "2754a4c862c9f4fd"
+    },
+    "content/schema_for.go": {
+      "hash": "bf74891115daf48f",
+      "noteIds": [
+        "shzrsh"
+      ]
+    },
+    "content/schema_for_test.go": {
+      "hash": "342e1ecf3d3b820e"
+    },
+    "domain/domain.go": {
+      "hash": "5e3388119eb31c18",
+      "noteIds": [
+        "7wsf3d"
+      ]
+    },
+    "fixtures/gen-prompt.ts": {
+      "hash": "3695bce484ec695f"
+    },
+    "fixtures/gen-registry.ts": {
+      "hash": "2b35832b8c0db045"
+    },
+    "fixtures/gen-turntree.ts": {
+      "hash": "2a01612b6d7553a8"
+    },
+    "fixtures/index.ts": {
+      "hash": "39e1ff1373d5a21b"
+    },
+    "handle.go": {
+      "hash": "48aa5057188f8090"
+    },
+    "history.go": {
+      "hash": "1e47491b21e6ce7b"
+    },
+    "inputs.go": {
+      "hash": "31ec16054647f4c4"
+    },
+    "kernel/api.go": {
+      "hash": "eb4052cc869a8666"
+    },
+    "kernel/api_test.go": {
+      "hash": "307059c49e3d4ae0"
+    },
+    "kernel/authorizer.go": {
+      "hash": "91e8e0f4e6a497c9"
+    },
+    "kernel/bus.go": {
+      "hash": "d902988e9fb6df15",
+      "noteIds": [
+        "hnpcoz"
+      ]
+    },
+    "kernel/bus_test.go": {
+      "hash": "f9220a4da3d459a1"
+    },
+    "kernel/dispatch.go": {
+      "hash": "62b7ce6d717add55"
+    },
+    "kernel/dispatch_test.go": {
+      "hash": "340e5e6683d294eb"
+    },
+    "kernel/errors.go": {
+      "hash": "69a2760365f6b8c1"
+    },
+    "kernel/errors_test.go": {
+      "hash": "c3c02a8c621096bf"
+    },
+    "kernel/kernel.go": {
+      "hash": "100d1616970c2ade"
+    },
+    "kernel/serializer.go": {
+      "hash": "805c7fee52713245"
+    },
+    "kernel/serializer_test.go": {
+      "hash": "4f130272c814a985"
+    },
+    "prompt/defaults.go": {
+      "hash": "4e6e75ac8303ccfc"
+    },
+    "prompt/extension_test.go": {
+      "hash": "011e2646bfa72e38"
+    },
+    "prompt/golden_test.go": {
+      "hash": "1671daff34f0e265"
+    },
+    "prompt/pipeline_test.go": {
+      "hash": "f3c102ca5b706ceb"
+    },
+    "prompt/prompt.go": {
+      "hash": "d4dde6b4b25f3238"
+    },
+    "prompt/stages.go": {
+      "hash": "a65db8c3dd8c5f38"
+    },
+    "prompt/ts_fixture_test.go": {
+      "hash": "4c68f45efe8df471"
+    },
+    "prompt/types.go": {
+      "hash": "5fe936fc9987bdb3"
+    },
+    "provider/anthropic/anthropic.go": {
+      "hash": "31bdb691d19535ba"
+    },
+    "provider/anthropic/recorded_test.go": {
+      "hash": "ee8f226675c47d7e"
+    },
+    "provider/internal/httpx/httpx.go": {
+      "hash": "d4bc91871bdf18dc"
+    },
+    "provider/internal/httpx/httpx_test.go": {
+      "hash": "3e6ae373f87a0415"
+    },
+    "provider/provider.go": {
+      "hash": "e5b7ddd4cf3a8541"
+    },
+    "provider/sse.go": {
+      "hash": "64a60859f95bdde9"
+    },
+    "provider/sse_test.go": {
+      "hash": "1215876f6bb806eb"
+    },
+    "spike/misc/main.go": {
+      "hash": "9b732a8cffd03908"
+    },
+    "spike/queries/main.go": {
+      "hash": "c29cb35a2468f78d"
+    },
+    "spike/records/main.go": {
+      "hash": "f8aed64164e4beb3"
+    },
+    "spike/tx/main.go": {
+      "hash": "eeb8c41be137cce6"
+    },
+    "store/anansistore/anansistore.go": {
+      "hash": "35d3afd355b08ae2"
+    },
+    "store/anansistore/anansistore_test.go": {
+      "hash": "ecb81a3b9898ed86"
+    },
+    "store/anansistore/blobs.go": {
+      "hash": "ae9f8b8ede5e95db",
+      "noteIds": [
+        "32kfv8",
+        "ctp1dk",
+        "ple99i",
+        "z18thn"
+      ]
+    },
+    "store/anansistore/contents.go": {
+      "hash": "3e6c0bcece2e18a9",
+      "noteIds": [
+        "c0nyaq",
+        "c0nyvq"
+      ]
+    },
+    "store/anansistore/conversations.go": {
+      "hash": "8bca604ddb9bd88b"
+    },
+    "store/anansistore/differential_test.go": {
+      "hash": "05ecff38ef1aa6b2"
+    },
+    "store/anansistore/errors.go": {
+      "hash": "cc812412472daef8"
+    },
+    "store/anansistore/escape_test.go": {
+      "hash": "4748b61f759a7199"
+    },
+    "store/anansistore/misc.go": {
+      "hash": "868d0f8914ef588b"
+    },
+    "store/anansistore/roles.go": {
+      "hash": "38a76dca9f181f5e"
+    },
+    "store/anansistore/runs.go": {
+      "hash": "f57be6486f88c240"
+    },
+    "store/anansistore/schema.go": {
+      "hash": "b1e41123f7e5f15b"
+    },
+    "store/anansistore/turns.go": {
+      "hash": "624633554cccd5c7"
+    },
+    "store/anansistore/util.go": {
+      "hash": "cb8de5f528beb8f2"
+    },
+    "store/memory/memory.go": {
+      "hash": "adb8306908f0ddfc"
+    },
+    "store/memory/repos.go": {
+      "hash": "1fc5bd776717ab94"
+    },
+    "store/memory/storetest_test.go": {
+      "hash": "788ab8f4766a33c7"
+    },
+    "store/store.go": {
+      "hash": "c9c91cdbb9d3dc70"
+    },
+    "store/storetest/repos.go": {
+      "hash": "51f3ef58722139b2"
+    },
+    "store/storetest/runs.go": {
+      "hash": "602a0e249ddae726"
+    },
+    "store/storetest/storetest.go": {
+      "hash": "2e9863e50f1875fd"
+    },
+    "store/storetest/tx.go": {
+      "hash": "7cd00182ec03e572"
+    },
+    "store/types.go": {
+      "hash": "ec280e8645097aae"
+    },
+    "workspace.go": {
+      "hash": "e357f01be1e1890a"
+    },
+    "workspace_test.go": {
+      "hash": "7062dcbedcdd6bfb"
+    },
+    "workspacetest/blobs.go": {
+      "hash": "ac08b77ffd3d7488"
+    },
+    "workspacetest/events.go": {
+      "hash": "0a095ad8b9eca901"
+    },
+    "workspacetest/harness.go": {
+      "hash": "9c7235c374642c10"
+    },
+    "workspacetest/provider.go": {
+      "hash": "3d52e4e4cf004287"
+    },
+    "workspacetest/workspacetest.go": {
+      "hash": "ad2f8114504b6569"
+    },
+    "workspacetest/workspacetest_test.go": {
+      "hash": "c255a86081be84ca"
+    }
+  }
+}
