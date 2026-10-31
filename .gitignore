@@ -148,3 +148,4 @@ test/
 *.out
 *.prof
 coverage.*
+*.db
