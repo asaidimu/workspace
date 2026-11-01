@@ -145,8 +145,13 @@ func TestCatalogueCoherence(t *testing.T) {
 		if !caps.Streaming || !caps.NativeTools || caps.ContextWindow <= 0 {
 			t.Errorf("model %s has implausible capabilities: %+v", m.ID, caps)
 		}
-		if m.Pricing.InputMicrosPerMTok <= 0 || m.Pricing.OutputMicrosPerMTok <= 0 {
-			t.Errorf("model %s has no pricing", m.ID)
+		// The catalogue is deliberately all free-tier, and a free model
+		// legitimately prices at zero. Coherence here means the currency
+		// is declared and no rate is negative — not that every model
+		// costs money.
+		if m.Pricing.Currency == "" || m.Pricing.InputMicrosPerMTok < 0 ||
+			m.Pricing.OutputMicrosPerMTok < 0 || m.Pricing.CachedMicrosPerMTok < 0 {
+			t.Errorf("model %s has incoherent pricing: %+v", m.ID, m.Pricing)
 		}
 	}
 	if _, err := c.Capabilities("nope"); err == nil {
