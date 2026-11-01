@@ -134,7 +134,7 @@ func TestSectionsFollowSpecOrder(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
-	want := []string{"policy", "persona", "preferences", "context", "artifacts", "instructions"}
+	want := []string{"persona", "policy", "preferences", "context", "artifacts", "instructions"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("section order = %v, want %v", got, want)
 	}
@@ -285,19 +285,64 @@ func TestToolCallAndResultAreKeptTogether(t *testing.T) {
 	}
 }
 
-func TestCompactionReplacesElidedTurns(t *testing.T) {
+func TestElisionDropsOldestAndRecordsDiagnostic(t *testing.T) {
 	in := baseInput()
 	for i := 0; i < 20; i++ {
 		in.Snapshot.Transcript = append(in.Snapshot.Transcript,
 			textTurn("old"+itoa(i), "user", strings.Repeat("z", 400)))
 	}
 	in.ContextWindow = 2000
-	in.Compactor = compactorFunc(func(ctx context.Context, turns []domain.Turn, target int) (Summary, error) {
-		if len(turns) == 0 {
-			t.Error("compactor called with no elided turns")
+
+	req, diags, err := DefaultPipeline().Build(context.Background(), in)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if len(req.Messages) == 0 {
+		t.Fatal("nothing survived")
+	}
+	sawLast := false
+	for _, m := range req.Messages {
+		if tp, ok := m.Parts[0].(provider.TextPart); ok && tp.Text == strings.Repeat("z", 400) {
+			sawLast = true
 		}
-		return Summary{Text: "SUMMARY OF THE PAST", TurnRefs: nil, InputTokens: target}, nil
-	})
+	}
+	if !sawLast {
+		t.Fatal("the newest turns must survive the fit")
+	}
+	var sawElided bool
+	for _, d := range diags {
+		if d.Code == "transcript.elided" {
+			sawElided = true
+		}
+	}
+	if !sawElided {
+		t.Fatalf("dropping turns to fit must be recorded as transcript.elided; got %v", diags)
+	}
+}
+
+func summaryTurnFixture(id, text string, covers []string) domain.Turn {
+	payload := map[string]any{"text": text, "covers": covers, "origin": "compactor"}
+	raw, _ := json.Marshal(payload)
+	return domain.Turn{
+		ID:      id,
+		Version: 1,
+		Actor:   domain.Actor{Kind: domain.ActorSystem, ID: "workspace"},
+		Blocks:  []domain.Block{{Type: "summary", Value: payload, Raw: raw}},
+	}
+}
+
+func TestCommittedSummaryAnchorsTheFit(t *testing.T) {
+	in := baseInput()
+	// A long prefix, a committed summary turn covering it, then a short tail.
+	for i := 0; i < 20; i++ {
+		in.Snapshot.Transcript = append(in.Snapshot.Transcript,
+			textTurn("old"+itoa(i), "user", strings.Repeat("z", 400)))
+	}
+	in.Snapshot.Transcript = append(in.Snapshot.Transcript,
+		summaryTurnFixture("sum-1", "SUMMARY OF THE PAST", []string{"old0:1", "old19:1"}),
+		textTurn("recent", "user", "the actual question"),
+	)
+	in.ContextWindow = 2000
 
 	req, _, err := DefaultPipeline().Build(context.Background(), in)
 	if err != nil {
@@ -308,10 +353,89 @@ func TestCompactionReplacesElidedTurns(t *testing.T) {
 	}
 	first, ok := req.Messages[0].Parts[0].(provider.TextPart)
 	if !ok || !strings.Contains(first.Text, "SUMMARY OF THE PAST") {
-		t.Fatalf("the summary must lead the fitted transcript, got %+v", req.Messages[0])
+		t.Fatalf("the committed summary must lead the transcript, got %+v", req.Messages[0])
 	}
 	if req.Messages[0].Role != provider.UserRole {
 		t.Fatalf("a summary is a system turn, mapped to user-level context; role = %v", req.Messages[0].Role)
+	}
+	for _, m := range req.Messages {
+		for _, p := range m.Parts {
+			if tp, ok := p.(provider.TextPart); ok && strings.Repeat("z", 400) == tp.Text {
+				t.Fatal("a covered turn was re-read into the prompt; the anchor must suppress its prefix")
+			}
+		}
+	}
+}
+
+func TestCommittedToolDigestsReplaceOldBodies(t *testing.T) {
+	in := baseInput()
+	callBlock := func(id string) domain.Block {
+		return domain.Block{Type: "tool_call", Value: map[string]any{
+			"call_id": id, "name": "shell", "arguments": json.RawMessage(`{"command":"go test"}`)}}
+	}
+	resultBlock := func(id, out string) domain.Block {
+		return domain.Block{Type: "tool_result", Value: map[string]any{
+			"call_id": id, "output": out}}
+	}
+	in.Snapshot.Transcript = []domain.Turn{
+		textTurn("t1", "user", "run the tests"),
+		{ID: "t2", Version: 1, Actor: domain.Actor{Kind: domain.ActorAgent, ID: "a"},
+			Blocks: []domain.Block{callBlock("call_1")}},
+		{ID: "t3", Version: 1, Actor: domain.Actor{Kind: domain.ActorTool, ID: "shell"},
+			Blocks: []domain.Block{resultBlock("call_1", strings.Repeat("FAIL", 500))}},
+		{ID: "t4", Version: 1, Actor: domain.Actor{Kind: domain.ActorAgent, ID: "a"},
+			Blocks: []domain.Block{callBlock("call_2")}},
+		{ID: "t5", Version: 1, Actor: domain.Actor{Kind: domain.ActorTool, ID: "shell"},
+			Blocks: []domain.Block{resultBlock("call_2", "ok")}},
+	}
+	digestPayload := map[string]any{"call_id": "call_1", "text": "Weather check completed for Lisbon: 19 C"}
+	raw, _ := json.Marshal(digestPayload)
+	in.Snapshot.Transcript = append(in.Snapshot.Transcript, domain.Turn{
+		ID: "t6", Version: 1, Actor: domain.Actor{Kind: domain.ActorSystem, ID: "workspace"},
+		Blocks: []domain.Block{{Type: "tool_digest", Value: digestPayload, Raw: raw}},
+	})
+
+	req, _, err := DefaultPipeline().Build(context.Background(), in)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	var digested, verbatim, sawDigestBlock int
+	for _, m := range req.Messages {
+		for _, p := range m.Parts {
+			switch tp := p.(type) {
+			case provider.ToolResultPart:
+				if strings.Contains(string(tp.Output), "Weather check completed") {
+					digested++
+				}
+				if strings.Contains(string(tp.Output), strings.Repeat("FAIL", 500)) {
+					t.Fatal("a digested round's raw body was still sent")
+				}
+				if string(tp.Output) == `"ok"` || strings.Contains(string(tp.Output), "ok") {
+					verbatim++
+				}
+			case provider.TextPart:
+				if tp.Text == "Weather check completed for Lisbon: 19 C" {
+					t.Fatal("a tool_digest block leaked into the prompt as text")
+				}
+			}
+		}
+	}
+	for _, t := range in.Snapshot.Transcript {
+		for _, blk := range t.Blocks {
+			if blk.Type == "tool_digest" {
+				sawDigestBlock++
+			}
+		}
+	}
+	if digested != 1 {
+		t.Fatalf("exactly the old round must be digested; got %d", digested)
+	}
+	if verbatim != 1 {
+		t.Fatalf("the newest round must stay verbatim; got %d", verbatim)
+	}
+	if sawDigestBlock != 1 {
+		t.Fatalf("the fixture is broken: digest blocks = %d", sawDigestBlock)
 	}
 }
 
@@ -468,22 +592,6 @@ func TestRetrieverErrorSurfaces(t *testing.T) {
 	}
 }
 
-func TestCompactorErrorSurfaces(t *testing.T) {
-	in := baseInput()
-	for i := 0; i < 20; i++ {
-		in.Snapshot.Transcript = append(in.Snapshot.Transcript,
-			textTurn("old"+itoa(i), "user", strings.Repeat("z", 400)))
-	}
-	in.ContextWindow = 2000
-	in.Compactor = compactorFunc(func(ctx context.Context, turns []domain.Turn, target int) (Summary, error) {
-		return Summary{}, errors.New("summarizer down")
-	})
-	_, _, err := DefaultPipeline().Build(context.Background(), in)
-	if !kernel.IsCode(err, kernel.CodeInternal) {
-		t.Fatalf("err = %v, want INTERNAL", err)
-	}
-}
-
 func TestEstimatorChargesBytesDividedByFour(t *testing.T) {
 	cases := []struct {
 		part provider.Part
@@ -573,12 +681,6 @@ type captureStage struct {
 
 func (s captureStage) Name() string                            { return s.name }
 func (s captureStage) Run(ctx context.Context, b *Build) error { return s.fn(ctx, b) }
-
-type compactorFunc func(ctx context.Context, turns []domain.Turn, target int) (Summary, error)
-
-func (f compactorFunc) Compact(ctx context.Context, turns []domain.Turn, target int) (Summary, error) {
-	return f(ctx, turns, target)
-}
 
 type retrieverFunc func(ctx context.Context, q RetrievalQuery) ([]Scored, error)
 

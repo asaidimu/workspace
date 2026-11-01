@@ -51,7 +51,7 @@ func TestExtensionAnchorsLandAroundBuiltIns(t *testing.T) {
 	}
 
 	ids, diags := sectionIDs(t, in)
-	want := "company,policy,postpol,legal,persona,footer,orphan"
+	want := "company,legal,persona,policy,postpol,footer,orphan"
 	if joinIDs(ids) != want {
 		t.Fatalf("section order = %v, want %v", ids, want)
 	}
@@ -162,7 +162,7 @@ func TestExtensionPlacementIsDeterministic(t *testing.T) {
 			t.Fatalf("run %d differs: %v vs %v", i, again, first)
 		}
 	}
-	want := "a.first,b.first,policy,persona,a.last,b.last"
+	want := "a.first,b.first,persona,policy,a.last,b.last"
 	if joinIDs(first) != want {
 		t.Fatalf("section order = %v, want %v", first, want)
 	}

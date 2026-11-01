@@ -3,7 +3,7 @@
     {
       "id": "policy",
       "title": "Policy",
-      "order": 1,
+      "order": 2,
       "body": "Be concise."
     }
   ],
@@ -27,5 +27,11 @@
     "context_window": 25,
     "reserved_output": 5,
     "used": 20
-  }
+  },
+  "diagnostics": [
+    {
+      "code": "transcript.elided",
+      "message": "1 turns after the last summary anchor did not fit the budget"
+    }
+  ]
 }

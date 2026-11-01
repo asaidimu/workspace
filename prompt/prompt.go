@@ -9,7 +9,10 @@
 //     preferences, and items from the retriever.
 //  3. Resolve — pick versions, drop tombstoned keys, apply preference
 //     precedence and record conflicts as diagnostics.
-//  4. Compact — fit the token budget.
+//  4. Compact — fit the token budget, anchored at the newest committed
+//     summary turn and splicing committed tool digests. The build itself
+//     never calls a model; summarization happens in the background (see
+//     compaction.go) and only committed state is ever read back.
 //  5. Assemble — build the ordered system sections and the transcript.
 //  6. Map — convert blocks to provider parts, apply capability downgrades,
 //     and attach tool specs and an output schema when needed.
@@ -105,13 +108,6 @@ type Scored struct {
 // Full-text and embedding retrievers plug in behind the same interface.
 type Retriever interface {
 	Retrieve(ctx context.Context, q RetrievalQuery) ([]Scored, error)
-}
-
-// Compactor replaces elided turns with a stored summary. Summaries are
-// internal content created in the background, never inside the user's turn,
-// and the next build picks them up.
-type Compactor interface {
-	Compact(ctx context.Context, turns []domain.Turn, targetTokens int) (Summary, error)
 }
 
 // Tokenizer counts the tokens a model will charge for a request.

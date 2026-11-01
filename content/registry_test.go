@@ -34,6 +34,8 @@ var specCaps = []struct {
 	{"preference", Consumable},
 	{"tool_call", Emittable},
 	{"tool_result", Consumable},
+	{"summary", Consumable},
+	{"tool_digest", Consumable},
 	{"unknown", 0},
 }
 

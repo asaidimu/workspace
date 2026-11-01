@@ -14,28 +14,31 @@ import (
 	"github.com/asaidimu/workspace/provider"
 )
 
-// Section orders from section 9's table. Extensions anchor before or after a
-// named section, or prepend or append to the list; the numbers here are the
-// anchors they anchor to.
+// Section orders. Persona leads the system prompt (identity primes tone for
+// everything after it), policy follows as the always-present operating rules.
+// Extensions anchor before or after a named section, or prepend or append to
+// the list; the numbers here are the anchors they anchor to.
 const (
 	// The structured-output preamble sits before every built-in section
 	// (order -1), so a prepended extension (0) still lands between the
-	// preamble and the policy section.
+	// preamble and the persona section.
 	orderOperatingSystem = -1
-	orderPolicy          = 1
-	orderTools           = 2
-	orderBlocks          = 3
-	orderPersona         = 4
-	orderPreferences     = 5
-	orderContext         = 6
-	orderArtifacts       = 7
-	orderInstructions    = 8
+	orderPersona         = 1
+	orderPolicy          = 2
+	orderTools           = 3
+	orderBlocks          = 4
+	orderPreferences     = 6
+	orderContext         = 7
+	orderArtifacts       = 8
+	orderInstructions    = 9
 
-	// Extensions resolve around the built-ins: prepend lands before policy,
+	// Extensions resolve around the built-ins: prepend lands before persona,
 	// and append — together with any anchor whose section was not assembled —
-	// lands after instructions.
+	// lands after instructions. Order 5 is deliberately left free so
+	// after:persona (2) and after:policy (3) have room to breathe before
+	// the preference section.
 	orderExtensionFirst = 0
-	orderExtensionLast  = 9
+	orderExtensionLast  = 10
 )
 
 // resolvedItem is content that survived selection and resolution, paired with
@@ -242,6 +245,12 @@ func (compactStage) Name() string { return "compact" }
 // Run fits the token budget. Fixed sections are costed first: if they alone
 // exceed the budget the build fails, because that is a configuration problem
 // no amount of transcript elision can fix.
+//
+// The build itself never calls a model. Committed tool digests are spliced
+// into old tool rounds first, and the newest committed summary turn anchors
+// the fit: everything before it is represented and never re-read. Summaries
+// are produced in the background (compaction.go) and only ever read back
+// here, so the same inputs still give a byte-identical prompt.
 func (compactStage) Run(ctx context.Context, b *Build) error {
 	sections := sectionBodies(b)
 	b.sectionCache = sections
@@ -261,27 +270,35 @@ func (compactStage) Run(ctx context.Context, b *Build) error {
 			WithPath(b.Snapshot.Conversation.ID)
 	}
 
-	// Transcript is fitted newest first, and a tool call and its result are
-	// kept or dropped together, so they are paired into units first.
+	// Committed digests replace old tool bodies before anything is costed,
+	// so the fit and the assembled messages agree on the same bytes.
+	if digests := DigestsFromTurns(b.Transcript); len(digests) > 0 {
+		b.Transcript = SpliceToolDigests(b.Transcript, digests)
+	}
+
+	// The newest committed summary turn anchors the fit: only the anchor
+	// itself is kept from its prefix — everything before it is represented
+	// by the summary and never re-read.
+	var anchored []domain.Turn
+	if ai, ok := FindSummaryAnchor(b.Transcript); ok {
+		b.checkSummaryCovers(b.Transcript[ai], b.Transcript[:ai])
+		anchored = b.Transcript[ai : ai+1]
+		b.Transcript = b.Transcript[ai+1:]
+	}
+
+	// The post-anchor tail is fitted newest first, and a tool call and its
+	// result are kept or dropped together, so they are paired into units
+	// first.
 	units := pairToolCalls(b.Transcript)
 	costFn := func(ts []domain.Turn) (int, error) {
 		return b.tokenizer.Count(b.input.Model, messageParts(ctx, b, ts))
 	}
 	kept, elided := fitUnits(units, costFn, window-fixed)
-	b.Transcript = kept
+	b.Transcript = append(anchored, kept...)
 
-	if len(elided) > 0 && b.input.Compactor != nil {
-		target := (window - fixed) / 4
-		if target <= 0 {
-			target = 1
-		}
-		summary, err := b.input.Compactor.Compact(ctx, elided, target)
-		if err != nil {
-			return kernel.WrapError(kernel.CodeInternal, "compaction failed", err)
-		}
-		if summary.Text != "" {
-			b.Transcript = append([]domain.Turn{summaryTurn(summary)}, b.Transcript...)
-		}
+	if len(elided) > 0 {
+		b.diagnostics("transcript.elided",
+			fmt.Sprintf("%d turns after the last summary anchor did not fit the budget", len(elided)), nil)
 	}
 
 	used, err := b.tokenizer.Count(b.input.Model, messageParts(ctx, b, b.Transcript))
@@ -290,6 +307,35 @@ func (compactStage) Run(ctx context.Context, b *Build) error {
 	}
 	b.Budget.Used = fixed + used
 	return nil
+}
+
+// checkSummaryCovers validates a summary anchor against the prefix it claims
+// to represent. A cover that does not resolve to a turn before the anchor is
+// a diagnostic, never an error: the anchor still holds, the caller just
+// learns that the bookkeeping drifted.
+func (b *Build) checkSummaryCovers(anchor domain.Turn, prefix []domain.Turn) {
+	for _, blk := range anchor.Blocks {
+		if blk.Type != "summary" {
+			continue
+		}
+		text, covers, ok := SummaryCovers(blk)
+		if !ok {
+			b.diagnostics("summary.covers", "the summary anchor has no readable payload", nil)
+			continue
+		}
+		if strings.TrimSpace(text) == "" {
+			b.diagnostics("summary.covers", "the summary anchor carries no text", nil)
+		}
+		present := make(map[string]bool, len(prefix))
+		for _, t := range prefix {
+			present[t.ID] = true
+		}
+		for _, ref := range covers {
+			if !present[ref.ID] {
+				b.diagnostics("summary.covers", "the summary covers turn "+ref.ID+", which is not in the prefix it anchors", nil)
+			}
+		}
+	}
 }
 
 // pairToolCalls groups turns into units, where a unit is a turn plus the
@@ -368,18 +414,6 @@ func fitUnits(units [][]domain.Turn, cost func([]domain.Turn) (int, error), budg
 		}
 	}
 	return kept, elided
-}
-
-// summaryTurn renders a compactor's summary as a system turn. Summaries are
-// internal content created in the background, never inside the user's turn.
-func summaryTurn(s Summary) domain.Turn {
-	raw, _ := json.Marshal(map[string]any{"text": s.Text})
-	return domain.Turn{
-		ID:      "summary",
-		Version: 1,
-		Actor:   domain.Actor{Kind: domain.ActorSystem, ID: "workspace"},
-		Blocks:  []domain.Block{{Type: "text", Value: map[string]any{"text": s.Text}, Raw: raw}},
-	}
 }
 
 // --- stage 5: assemble ---
@@ -624,17 +658,50 @@ func contextBody(b *Build) string {
 	return strings.Join(parts, "\n\n")
 }
 
-// artifactsBody is the latest version of write and readwrite content
-// (section 9's table).
+// artifactsBody is write and readwrite content (section 9's table). With
+// native tool calling the body is one read away, so the section carries only
+// a manifest — key, version, mode and title — which keeps the section tiny
+// and its prefix cache-stable across edits. Without tools (the no-tools
+// structured path) inline bodies remain the only channel, so they render in
+// full.
 func artifactsBody(b *Build) string {
 	var parts []string
 	for _, it := range b.resolved {
 		if it.Content.Mode != domain.ModeWrite && it.Content.Mode != domain.ModeReadWrite {
 			continue
 		}
+		if b.input.NativeTools {
+			parts = append(parts, artifactManifestLine(it.Content))
+			continue
+		}
 		parts = append(parts, renderContent(b, it.Content))
 	}
 	return strings.Join(parts, "\n\n")
+}
+
+// artifactManifestLine renders one content entry as a manifest line.
+func artifactManifestLine(c domain.Content) string {
+	title := contentTitle(c)
+	return fmt.Sprintf("- %s v%d (%s): %s", c.Key, c.Version, c.Mode, title)
+}
+
+// contentTitle extracts an entry's title when its payload carries one, and
+// falls back to the first line of its rendered body.
+func contentTitle(c domain.Content) string {
+	var m map[string]any
+	if json.Unmarshal(c.Value, &m) == nil {
+		if t, ok := m["title"].(string); ok && t != "" {
+			return t
+		}
+	}
+	line := contentBody(c)
+	if i := strings.IndexAny(line, "\n\r"); i >= 0 {
+		line = line[:i]
+	}
+	if len(line) > 60 {
+		line = line[:60] + "..."
+	}
+	return line
 }
 
 // renderContent renders one content entry through the block registry when
@@ -710,8 +777,10 @@ func structuredBlocksBody(reg content.Registry) string {
 		return strings.TrimRight(sb.String(), "\n")
 	}
 	for _, bt := range reg.Types() {
-		if bt.Capabilities()&content.Emittable == 0 || bt.Name() == "tool_call" || bt.Name() == "unknown" {
-			// tool_call blocks stay native; unknown is never emittable.
+		if bt.Capabilities()&content.Emittable == 0 || bt.Name() == "thinking" || bt.Name() == "tool_call" || bt.Name() == "unknown" {
+			// tool_call blocks stay native; unknown is never emittable;
+			// thinking is a provider channel — traces come back from the
+			// model's reasoning, they are never asked for in prose.
 			continue
 		}
 		sb.WriteString(bt.Name())
@@ -751,6 +820,12 @@ func hybridBlocksBody(reg content.Registry, nativeTools bool) string {
 		switch bt.Name() {
 		case "text":
 			// Prose is a text block; no wrapper needed or allowed.
+			continue
+		case "thinking":
+			// Thinking is the provider's channel: traces come back from the
+			// model's reasoning channel and are stored for display. Asking
+			// for them in prose pollutes the user-visible transcript, and a
+			// thinking-capable model already has a native route.
 			continue
 		case "tool_call":
 			if nativeTools {
@@ -916,6 +991,16 @@ func blockPart(blk domain.Block) []provider.Part {
 		if res, ok := toolResultFrom(blk); ok {
 			return []provider.Part{res}
 		}
+	case "summary":
+		// A committed history digest renders as plain text; it anchors the
+		// fit and leads the transcript it represents.
+		if txt, ok := blockText(blk); ok {
+			return []provider.Part{provider.TextPart{Text: txt}}
+		}
+	case "tool_digest":
+		// Workspace bookkeeping: never sent to a provider. Its text is
+		// spliced into the old tool result it digests by the compact stage.
+		return nil
 	}
 	if len(blk.Raw) > 0 {
 		return []provider.Part{provider.TextPart{Text: string(blk.Raw)}}

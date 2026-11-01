@@ -7,44 +7,44 @@
       "body": "Company policy."
     },
     {
-      "id": "policy",
-      "title": "Policy",
-      "order": 1,
-      "body": "Be concise."
-    },
-    {
-      "id": "postpol",
-      "title": "postpol",
-      "order": 2,
-      "body": "Post policy."
-    },
-    {
       "id": "legal",
       "title": "legal",
-      "order": 3,
+      "order": 0,
       "body": "Legal notice."
     },
     {
       "id": "persona",
       "title": "Persona",
-      "order": 4,
+      "order": 1,
       "body": "Persona."
+    },
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 2,
+      "body": "Be concise."
+    },
+    {
+      "id": "postpol",
+      "title": "postpol",
+      "order": 3,
+      "body": "Post policy."
     },
     {
       "id": "footer",
       "title": "footer",
-      "order": 9,
+      "order": 10,
       "body": "Footer."
     },
     {
       "id": "orphan",
       "title": "orphan",
-      "order": 9,
+      "order": 10,
       "body": "Orphan."
     }
   ],
   "system": [
-    "# company\nCompany policy.\n\n---\n\n# Policy\nBe concise.\n\n---\n\n# postpol\nPost policy.\n\n---\n\n# legal\nLegal notice.\n\n---\n\n# Persona\nPersona.\n\n---\n\n# footer\nFooter.\n\n---\n\n# orphan\nOrphan."
+    "# company\nCompany policy.\n\n---\n\n# legal\nLegal notice.\n\n---\n\n# Persona\nPersona.\n\n---\n\n# Policy\nBe concise.\n\n---\n\n# postpol\nPost policy.\n\n---\n\n# footer\nFooter.\n\n---\n\n# orphan\nOrphan."
   ],
   "messages": [
     {

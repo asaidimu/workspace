@@ -3,18 +3,18 @@
     {
       "id": "policy",
       "title": "Policy",
-      "order": 1,
+      "order": 2,
       "body": "Be concise."
     },
     {
       "id": "blocks",
       "title": "Block types",
-      "order": 3,
-      "body": "Reply in ordinary text. When a message needs typed content, embed a workspace block like this:\n\n```workspace:\u003ctype\u003e\n{...one JSON object for the block value...}\n```\n\nEverything outside such fences is plain text. The workspace assigns block IDs; do not emit `id` or `key`.\n\nEach payload is exactly one JSON object with the fields its type lists; unknown fields are rejected.\n\n## BLOCK TYPES\n- `document`: A titled document, inline text or a blob reference\n  - inline: {\"title\": \"...\", \"text\": \"...\"}\n  - blob: {\"title\": \"...\", \"ref\": \"\u003cblob id\u003e\", \"media_type\": \"...\"}\n- `json`: Structured data, validated by a schema at the call site\n  - the payload is any JSON object, e.g. {\"items\": [1, 2, 3]}\n- `thinking`: A reasoning trace, kept for display\n  - {\"text\": \"...\", \"signature\": \"...\"} (signature optional)\n\nOnly the types listed above may appear in a workspace fence. Never wrap tools in blocks; call tools through the provider's tool channel instead."
+      "order": 4,
+      "body": "Reply in ordinary text. When a message needs typed content, embed a workspace block like this:\n\n```workspace:\u003ctype\u003e\n{...one JSON object for the block value...}\n```\n\nEverything outside such fences is plain text. The workspace assigns block IDs; do not emit `id` or `key`.\n\nEach payload is exactly one JSON object with the fields its type lists; unknown fields are rejected.\n\n## BLOCK TYPES\n- `document`: A titled document, inline text or a blob reference\n  - inline: {\"title\": \"...\", \"text\": \"...\"}\n  - blob: {\"title\": \"...\", \"ref\": \"\u003cblob id\u003e\", \"media_type\": \"...\"}\n- `json`: Structured data, validated by a schema at the call site\n  - the payload is any JSON object, e.g. {\"items\": [1, 2, 3]}\n\nOnly the types listed above may appear in a workspace fence. Never wrap tools in blocks; call tools through the provider's tool channel instead."
     }
   ],
   "system": [
-    "# Policy\nBe concise.\n\n---\n\n# Block types\nReply in ordinary text. When a message needs typed content, embed a workspace block like this:\n\n```workspace:\u003ctype\u003e\n{...one JSON object for the block value...}\n```\n\nEverything outside such fences is plain text. The workspace assigns block IDs; do not emit `id` or `key`.\n\nEach payload is exactly one JSON object with the fields its type lists; unknown fields are rejected.\n\n## BLOCK TYPES\n- `document`: A titled document, inline text or a blob reference\n  - inline: {\"title\": \"...\", \"text\": \"...\"}\n  - blob: {\"title\": \"...\", \"ref\": \"\u003cblob id\u003e\", \"media_type\": \"...\"}\n- `json`: Structured data, validated by a schema at the call site\n  - the payload is any JSON object, e.g. {\"items\": [1, 2, 3]}\n- `thinking`: A reasoning trace, kept for display\n  - {\"text\": \"...\", \"signature\": \"...\"} (signature optional)\n\nOnly the types listed above may appear in a workspace fence. Never wrap tools in blocks; call tools through the provider's tool channel instead."
+    "# Policy\nBe concise.\n\n---\n\n# Block types\nReply in ordinary text. When a message needs typed content, embed a workspace block like this:\n\n```workspace:\u003ctype\u003e\n{...one JSON object for the block value...}\n```\n\nEverything outside such fences is plain text. The workspace assigns block IDs; do not emit `id` or `key`.\n\nEach payload is exactly one JSON object with the fields its type lists; unknown fields are rejected.\n\n## BLOCK TYPES\n- `document`: A titled document, inline text or a blob reference\n  - inline: {\"title\": \"...\", \"text\": \"...\"}\n  - blob: {\"title\": \"...\", \"ref\": \"\u003cblob id\u003e\", \"media_type\": \"...\"}\n- `json`: Structured data, validated by a schema at the call site\n  - the payload is any JSON object, e.g. {\"items\": [1, 2, 3]}\n\nOnly the types listed above may appear in a workspace fence. Never wrap tools in blocks; call tools through the provider's tool channel instead."
   ],
   "messages": [
     {
@@ -48,7 +48,7 @@
   "budget": {
     "context_window": 8000,
     "reserved_output": 800,
-    "used": 252
+    "used": 224
   },
   "diagnostics": [
     {

@@ -1,44 +1,44 @@
 {
   "sections": [
     {
-      "id": "policy",
-      "title": "Policy",
-      "order": 1,
-      "body": "Be concise."
-    },
-    {
       "id": "persona",
       "title": "Persona",
-      "order": 4,
+      "order": 1,
       "body": "You are concise."
+    },
+    {
+      "id": "policy",
+      "title": "Policy",
+      "order": 2,
+      "body": "Be concise."
     },
     {
       "id": "preferences",
       "title": "User Preferences",
-      "order": 5,
+      "order": 6,
       "body": "- instruction of pref1"
     },
     {
       "id": "context",
       "title": "Context",
-      "order": 6,
+      "order": 7,
       "body": "{\"text\":\"body of pref-1\"}"
     },
     {
       "id": "artifacts",
       "title": "Artifacts",
-      "order": 7,
+      "order": 8,
       "body": "{\"text\":\"body of cfg-1\"}"
     },
     {
       "id": "instructions",
       "title": "Instructions",
-      "order": 8,
+      "order": 9,
       "body": "Cite sources."
     }
   ],
   "system": [
-    "# Policy\nBe concise.\n\n---\n\n# Persona\nYou are concise.\n\n---\n\n# User Preferences\n- instruction of pref1\n\n---\n\n# Context\n{\"text\":\"body of pref-1\"}\n\n---\n\n# Artifacts\n{\"text\":\"body of cfg-1\"}\n\n---\n\n# Instructions\nCite sources."
+    "# Persona\nYou are concise.\n\n---\n\n# Policy\nBe concise.\n\n---\n\n# User Preferences\n- instruction of pref1\n\n---\n\n# Context\n{\"text\":\"body of pref-1\"}\n\n---\n\n# Artifacts\n{\"text\":\"body of cfg-1\"}\n\n---\n\n# Instructions\nCite sources."
   ],
   "messages": [
     {

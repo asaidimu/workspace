@@ -31,6 +31,11 @@ func registerBuiltins(r *registry) error {
 		{mustType(preferenceType()), mapperFunc(preferenceParts)},
 		{mustType(toolCallType()), mapperFunc(toolCallParts)},
 		{mustType(toolResultType()), mapperFunc(toolResultParts)},
+		// summary and tool_digest are workspace bookkeeping: never emittable,
+		// never mapped. A summary turn anchors the prompt's fit; tool_digest
+		// blocks are spliced into old tool results by the compact stage.
+		{mustType(summaryType()), nil},
+		{mustType(toolDigestType()), nil},
 		// unknown has no mapper on purpose: an unknown block is never sent
 		// to a provider.
 		{mustType(unknownType()), nil},
@@ -128,13 +133,32 @@ func imageParts(ctx context.Context, b domain.Block, _ provider.Capabilities, en
 	return resolveBlob(ctx, env, p.Ref, "[image omitted]")
 }
 
-// documentType is a blob or inline text with a title.
+// documentType is a blob or inline text with a title. It renders as markdown
+// ("## title" plus body) — the default compact-JSON renderer would burn
+// tokens on braces and key names for the most common content type.
 func documentType() (BlockType, error) {
 	return NewBlockType[documentPayload]("document", Consumable|Emittable,
 		WithDescription("A titled document, inline text or a blob reference"),
 		WithRules([]string{
 			`inline: {"title": "...", "text": "..."}`,
 			`blob: {"title": "...", "ref": "<blob id>", "media_type": "..."}`,
+		}),
+		WithRender(func(value any) (string, error) {
+			p, err := bindPayload[documentPayload](value)
+			if err != nil {
+				return "", err
+			}
+			if p.Title == "" {
+				if p.Text != nil {
+					return *p.Text, nil
+				}
+				return "", nil
+			}
+			out := "## " + p.Title
+			if p.Text != nil && *p.Text != "" {
+				out += "\n\n" + *p.Text
+			}
+			return out, nil
 		}),
 	)
 }
@@ -365,6 +389,44 @@ func jsonParts(_ context.Context, b domain.Block, _ provider.Capabilities, _ Map
 		}
 	}
 	return []provider.Part{provider.TextPart{Text: string(raw)}}, nil
+}
+
+// summaryType is a committed history digest: the workspace's record that the
+// turns it covers are represented by its text. Never emittable — the model
+// never invents summaries; the background compactor commits them as system
+// turns, and the prompt pipeline anchors the fit at the newest one.
+func summaryType() (BlockType, error) {
+	return NewBlockType[summaryPayload]("summary", Consumable,
+		WithDescription("A committed history digest produced by the workspace"),
+		WithRender(func(value any) (string, error) {
+			p, err := bindPayload[summaryPayload](value)
+			return p.Text, err
+		}),
+	)
+}
+
+type summaryPayload struct {
+	Text   string   `json:"text"`
+	Covers []string `json:"covers,omitempty"`
+	Origin string   `json:"origin,omitempty"`
+}
+
+// toolDigestType is one committed narrative line for one old tool round,
+// keyed by call ID. Never emittable and never mapped: the compact stage
+// splices the text into the tool_result body it digests.
+func toolDigestType() (BlockType, error) {
+	return NewBlockType[toolDigestPayload]("tool_digest", Consumable,
+		WithDescription("A committed one-line digest of a completed tool round"),
+		WithRender(func(value any) (string, error) {
+			p, err := bindPayload[toolDigestPayload](value)
+			return p.Text, err
+		}),
+	)
+}
+
+type toolDigestPayload struct {
+	CallID string `json:"call_id"`
+	Text   string `json:"text"`
 }
 
 // bindPayload converts a block's value — a typed payload or a plain

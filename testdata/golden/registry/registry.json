@@ -26,6 +26,11 @@
       "emittable": false
     },
     {
+      "name": "summary",
+      "consumable": true,
+      "emittable": false
+    },
+    {
       "name": "text",
       "consumable": true,
       "emittable": true
@@ -39,6 +44,11 @@
       "name": "tool_call",
       "consumable": false,
       "emittable": true
+    },
+    {
+      "name": "tool_digest",
+      "consumable": true,
+      "emittable": false
     },
     {
       "name": "tool_result",

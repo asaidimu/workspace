@@ -60,13 +60,6 @@ const (
 	FromRetriever
 )
 
-// Summary is a compactor's replacement for a run of elided turns.
-type Summary struct {
-	Text        string
-	TurnRefs    []domain.TurnRef
-	InputTokens int
-}
-
 // Input is what the caller hands Pipeline.Build.
 type Input struct {
 	Snapshot     Snapshot
@@ -111,10 +104,10 @@ type Input struct {
 	// every count approximate in a diagnostic.
 	Tokenizer Tokenizer
 
-	// Retriever and Compactor are optional; nil means no retrieval and no
-	// summarization of elided turns.
+	// Retriever is optional; nil means no retrieval. Compaction is a
+	// background concern (see compaction.go): a build never calls a model,
+	// it only reads committed summary turns and tool digests.
 	Retriever Retriever
-	Compactor Compactor
 
 	// Policy is the fixed operating rules from the workspace. It is the one
 	// section that is always present.

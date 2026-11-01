@@ -3,13 +3,13 @@
     {
       "id": "policy",
       "title": "Policy",
-      "order": 1,
+      "order": 2,
       "body": "Be concise."
     },
     {
       "id": "context",
       "title": "Context",
-      "order": 6,
+      "order": 7,
       "body": "{\"text\":\"shared\"}"
     }
   ],
