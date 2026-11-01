@@ -510,3 +510,43 @@ func LocalUser(owner string) kernel.Principal {
 func Text(s string) []domain.Block {
 	return []domain.Block{{Type: "text", Value: map[string]any{"text": s}}}
 }
+
+// @note #localuser-no-scopes issue status=open priority=P1 tags=#tools,#scopes,#security : LocalUser grants no scopes, so every scoped tool is invisible
+// @see #provider-opaque-state-lost
+//
+// workspace.LocalUser promises "a principal holding every scope" in its doc
+// comment, then returns Scopes: nil. agent/registry.Specs filters by
+// hasAllScopes, so a principal with no scopes sees zero tools. The library
+// loads fine (tools.Tools -> workspace.Open -> registry.Register) and any
+// dump of the registry shows every tool, but the prompt never gets them:
+// step.go builds providerSpecs from registry.Specs(p), which is empty;
+// toolsSection returns "" because Input.Tools is empty; and mapStage sets
+// Request.Tools = nil. The model correctly reports "none were provided" —
+// it is not hallucinating, and the earlier belief that it was is what led
+// to the workaround below.
+//
+// The symptom was worked around by injecting a tool inventory into the
+// system prompt (toolsSection / toolInventoryBody in prompt/stages.go).
+// That is NOT a fix: Request.Tools is still nil, so the provider receives
+// no tool declarations, and a model that believes it has tools will try to
+// call them and fail — worse than an honest "I have no tools". The
+// workaround also masks the real failure from any test that only inspects
+// the rendered system prompt.
+//
+// Real fix:
+//   1. workspace.LocalUser must populate Scopes with the demo's scope set
+//      (e.g. code:read, code:write, code:exec, code:vcs), OR teach
+//      hasAllScopes a "*" wildcard and grant it there. Production
+//      principals must never carry "*"; only the single-user demo handle
+//      should.
+//   2. Any other single-user principal constructor needs the same
+//      treatment. Grep for `kind: kernel.UserPrincipal` in the workspace.
+//   3. selectTools narrows the agent principal to the intersection of
+//      p.Scopes and the exposed tools' scopes; with p.Scopes empty it
+//      produces an empty agent principal, so even a call that reached a
+//      tool would run under no scopes and be refused downstream.
+//   4. Regression test: open a workspace with tools loaded, build a prompt
+//      with a LocalUser principal, assert Request.Tools is non-empty.
+//
+// See #provider-opaque-state-lost for a separate reason the tool loop can
+// 400 on the second turn even when Request.Tools is populated.

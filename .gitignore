@@ -149,3 +149,4 @@ test/
 *.prof
 coverage.*
 *.db
+.commit-message.md

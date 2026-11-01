@@ -217,3 +217,53 @@ type Provider interface {
 type CredentialSource interface {
 	Credential(ctx context.Context, providerName string) (string, error)
 }
+
+
+// @note #provider-opaque-state-lost issue status=open priority=P0 tags=#provider,#gemini,#architecture : Opaque provider state is lost at every port boundary
+// @see #localuser-no-scopes
+//
+// Modern providers attach opaque, provider-generated state to parts and
+// require it echoed back verbatim on the next request:
+//   - Gemini 3+: thoughtSignature on the first functionCall part of a step
+//     (it is a *sibling* of functionCall, not a field inside it)
+//   - OpenAI Responses API: reasoning.encrypted_content on reasoning items
+//   - Anthropic: thinking-block signatures
+//
+// Gemini's symptom is a 400 on the *second* turn of any tool-calling
+// exchange, never the first: INVALID_ARGUMENT "Function call is missing a
+// thought_signature" naming the first functionCall of the step after the
+// user message. Parallel calls carry the signature on only the first;
+// sequential steps each carry their own; only the current turn (from the
+// last user text message) is validated. Older turns without signatures are
+// tolerated, so the bug only bites after a tool has run.
+//
+// The signature is dropped at four boundaries on the way back:
+//   1. wirePart in provider/gemini/gemini.go has no thoughtSignature field,
+//      so decodeParts and the stream's mapFrame cannot capture it.
+//   2. provider.ToolCallPart has no opaque passthrough, so even a captured
+//      value has nowhere to live.
+//   3. domain.Block for tool_call stores only call_id/name/arguments, so
+//      both parseBlocks (the content.ParseParts path used when a registry
+//      is wired) and assistantBlocks (the static fallback) drop it before
+//      persistence.
+//   4. agent.ToolCall and pendingCall drop it, so a RiskConfirm call parked
+//      for approval loses the signature across the checkpoint and 400s when
+//      the run resumes.
+//
+// Proposed fix (architectural, not a per-vendor field): treat Block.Raw as
+// "provider-native representation, replayed verbatim" and add a namespaced
+// opaque map (ProviderMeta map[string]json.RawMessage on both Part and
+// Block, matching Vercel's providerOptions model). The adapter is the only
+// code that reads or writes its own namespace; every other layer
+// round-trips it opaquely. New providers then need no core change.
+//
+// Escape hatch for already-committed unsigned turns:
+// "skip_thought_signature_validator". Google documents it as a last resort
+// that degrades quality; inject it only when the signature is genuinely
+// unrecoverable, never over a real one, and only on the first functionCall
+// of a step.
+//
+// Invariant to enforce with a golden test: every part crossing
+// Part -> Block -> ToolCall -> pendingCall -> Part must round-trip its
+// opaque payload byte-for-byte. The LangChain and Vercel bug histories are
+// violations of exactly this invariant at one converter each.

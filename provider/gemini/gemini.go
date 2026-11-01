@@ -69,32 +69,6 @@ func (c *Client) Capabilities(model string) (provider.Capabilities, error) {
 	return provider.Capabilities{}, fmt.Errorf("gemini: unknown model %q", model)
 }
 
-func catalogue() []provider.ModelInfo {
-	return []provider.ModelInfo{
-		{
-			ID: "gemini-2.5-pro",
-			Capabilities: provider.Capabilities{
-				Streaming: true, NativeTools: true, StructuredOutput: true,
-				Vision: true, PDF: true, Thinking: true, FileUpload: true,
-				PromptCaching:   true,
-				ContextWindow:   1_048_576,
-				MaxOutputTokens: 65_536,
-			},
-			Pricing: provider.Pricing{Currency: "USD", InputMicrosPerMTok: 1_250_000, OutputMicrosPerMTok: 10_000_000, CachedMicrosPerMTok: 310_000},
-		},
-		{
-			ID: "gemini-2.5-flash",
-			Capabilities: provider.Capabilities{
-				Streaming: true, NativeTools: true, StructuredOutput: true,
-				Vision: true, PDF: true, Thinking: true, FileUpload: true,
-				PromptCaching:   true,
-				ContextWindow:   1_048_576,
-				MaxOutputTokens: 65_536,
-			},
-			Pricing: provider.Pricing{Currency: "USD", InputMicrosPerMTok: 300_000, OutputMicrosPerMTok: 2_500_000, CachedMicrosPerMTok: 75_000},
-		},
-	}
-}
 
 // --- request mapping ---
 
