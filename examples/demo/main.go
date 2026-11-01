@@ -112,7 +112,7 @@ func main() {
 		Blobs:      workspacetest.NewMemoryBlobs(),
 		Providers:  plan.providers,
 		Authorizer: kernel.AllowOwner(),
-		Tools:      []agent.Tool{shellTool()},
+		Tools:      []agent.Tool{shellTool(Config{Root: "."})},
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "demo: opening the workspace: %v\n", err)

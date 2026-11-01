@@ -34,7 +34,7 @@ func newTestApp(t *testing.T) (*app, *workspacetest.ScriptedProvider) {
 		Blobs:      workspacetest.NewMemoryBlobs(),
 		Providers:  []provider.Provider{sp},
 		Authorizer: kernel.AllowOwner(),
-		Tools:      []agent.Tool{shellTool()},
+		Tools:      []agent.Tool{shellTool(Config{Root: "."})},
 	})
 	if err != nil {
 		t.Fatalf("Open: %v", err)
