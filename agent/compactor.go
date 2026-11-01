@@ -14,7 +14,7 @@ import (
 	"github.com/asaidimu/workspace/provider"
 )
 
-// ModelCompactor digests elided history and old tool traffic with a small
+// ModelCompactor digests omitted history and old tool traffic with a small
 // secondary model through the provider interface. It is the default
 // prompt.Compactor implementation and is deliberately plain: one call per
 // compaction, two fixed templates (history digest, tool-line digest),
@@ -28,7 +28,7 @@ type ModelCompactor struct {
 	Provider provider.Provider
 	// Model is the small fast model that does the digesting.
 	Model string
-	// MinTurns refuses a history summary for fewer than this many elided
+	// MinTurns refuses a history summary for fewer than this many omitted
 	// turns — a digest of one or two turns costs more than it saves.
 	// Default 4.
 	MinTurns int
@@ -71,7 +71,7 @@ func (m *ModelCompactor) Compact(ctx context.Context, in prompt.CompactionInput)
 	} else {
 		rounds = nil
 	}
-	summarizeHistory := len(in.Elided) >= minTurns
+	summarizeHistory := len(in.Omitted) >= minTurns
 	if len(rounds) == 0 && !summarizeHistory {
 		return nil, nil
 	}
@@ -79,7 +79,7 @@ func (m *ModelCompactor) Compact(ctx context.Context, in prompt.CompactionInput)
 	var sb strings.Builder
 	if summarizeHistory {
 		sb.WriteString("TURNS (oldest first):\n")
-		for _, t := range in.Elided {
+		for _, t := range in.Omitted {
 			for _, blk := range t.Blocks {
 				if txt, ok := blockTextOf(blk); ok {
 					sb.WriteString(string(t.Actor.Kind) + ": " + truncateRunes(txt, 200) + "\n")
@@ -152,9 +152,9 @@ func parseCompaction(out string, in prompt.CompactionInput) ([]prompt.Compaction
 	}
 
 	var out_summaries []prompt.CompactionSummary
-	if text := strings.TrimSpace(parsed.ContextSummary); text != "" && len(in.Elided) > 0 {
-		covers := make([]domain.TurnRef, 0, len(in.Elided))
-		for _, t := range in.Elided {
+	if text := strings.TrimSpace(parsed.ContextSummary); text != "" && len(in.Omitted) > 0 {
+		covers := make([]domain.TurnRef, 0, len(in.Omitted))
+		for _, t := range in.Omitted {
 			covers = append(covers, t.Ref())
 		}
 		out_summaries = append(out_summaries, prompt.CompactionSummary{
@@ -230,22 +230,22 @@ func (w *DigestWorker) MaybeCompact(ctx context.Context, p kernel.Principal, con
 		lastAnchor = &ref
 	}
 
-	// Elision policy, mirroring the build's unit semantics: when the tail's
+	// Omission policy, mirroring the build's unit semantics: when the tail's
 	// estimated tokens pass the pressure threshold, propose a summary of the
 	// oldest half of the tail's units. The build stays the authority — it
-	// elides what does not fit regardless — this only seeds the summary so
+	// omits what does not fit regardless — this only seeds the summary so
 	// the prefix stabilizes instead of wobbling.
 	pressure := w.Pressure
 	if pressure <= 0 {
 		pressure = 0.5
 	}
-	var elided []domain.Turn
+	var omitted []domain.Turn
 	if estimateTurnTokens(tail) > int(float64(workingBudget(snapshot))*pressure) && len(tail) > 0 {
 		units := prompt.PairToolCalls(tail)
 		half := len(units) / 2
 		if half > 0 {
 			for _, u := range units[:half] {
-				elided = append(elided, u...)
+				omitted = append(omitted, u...)
 			}
 		}
 	}
@@ -259,13 +259,13 @@ func (w *DigestWorker) MaybeCompact(ctx context.Context, p kernel.Principal, con
 	} else {
 		rounds = nil
 	}
-	if len(elided) == 0 && len(rounds) == 0 {
+	if len(omitted) == 0 && len(rounds) == 0 {
 		return nil, nil
 	}
 
 	summaries, err := w.Compactor.Compact(ctx, prompt.CompactionInput{
 		Snapshot:   snapshot,
-		Elided:     elided,
+		Omitted:    omitted,
 		ToolRounds: rounds,
 		LastAnchor: lastAnchor,
 		Budget:     prompt.Budget{Used: estimateTurnTokens(tail)},
@@ -312,10 +312,10 @@ func (w *DigestWorker) commitContextSummary(ctx context.Context, p kernel.Princi
 		return kernel.WrapError(kernel.CodeInternal, "the summary payload does not marshal", err)
 	}
 	turn := domain.Turn{
-		ID:     "sum-" + hashCovers(s.Covers),
+		ID:      "sum-" + hashCovers(s.Covers),
 		Version: 1,
-		Actor:  domain.Actor{Kind: domain.ActorSystem, ID: "workspace"},
-		Blocks: []domain.Block{{Type: "summary", Value: payload, Raw: raw}},
+		Actor:   domain.Actor{Kind: domain.ActorSystem, ID: "workspace"},
+		Blocks:  []domain.Block{{Type: "summary", Value: payload, Raw: raw}},
 	}
 	_, err = w.History.Append(ctx, p, conversationID, turn, "summary:"+hashCovers(s.Covers))
 	return err
@@ -336,10 +336,10 @@ func (w *DigestWorker) commitToolSummary(ctx context.Context, p kernel.Principal
 		keys = append(keys, l.CallID)
 	}
 	turn := domain.Turn{
-		ID:     "dig-" + hashStrings(keys),
+		ID:      "dig-" + hashStrings(keys),
 		Version: 1,
-		Actor:  domain.Actor{Kind: domain.ActorSystem, ID: "workspace"},
-		Blocks: blocks,
+		Actor:   domain.Actor{Kind: domain.ActorSystem, ID: "workspace"},
+		Blocks:  blocks,
 	}
 	_, err := w.History.Append(ctx, p, conversationID, turn, "digest:"+hashStrings(keys))
 	return err

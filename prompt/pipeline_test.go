@@ -203,7 +203,7 @@ func TestFixedSectionsOverBudgetFails(t *testing.T) {
 func TestTranscriptIsFittedNewestFirst(t *testing.T) {
 	in := baseInput()
 	// The transcript is chronological, so the appended turns are the newest.
-	// A moderate window keeps the newest few and elides the oldest.
+	// A moderate window keeps the newest few and omits the oldest.
 	for i := 0; i < 8; i++ {
 		in.Snapshot.Transcript = append(in.Snapshot.Transcript,
 			textTurn("old"+itoa(i), "user", "OLD"+itoa(i)+strings.Repeat("y", 396)))
@@ -230,10 +230,10 @@ func TestTranscriptIsFittedNewestFirst(t *testing.T) {
 			continue
 		}
 		if strings.Contains(p.Text, "hello") || strings.Contains(p.Text, "hi there") {
-			t.Fatal("the oldest turns should have been elided first")
+			t.Fatal("the oldest turns should have been omitted first")
 		}
 		if strings.Contains(p.Text, "OLD0") {
-			t.Fatal("OLD0 is older than the surviving turns and must be elided")
+			t.Fatal("OLD0 is older than the surviving turns and must be omitted")
 		}
 	}
 }
@@ -285,7 +285,7 @@ func TestToolCallAndResultAreKeptTogether(t *testing.T) {
 	}
 }
 
-func TestElisionDropsOldestAndRecordsDiagnostic(t *testing.T) {
+func TestOmissionDropsOldestAndRecordsDiagnostic(t *testing.T) {
 	in := baseInput()
 	for i := 0; i < 20; i++ {
 		in.Snapshot.Transcript = append(in.Snapshot.Transcript,
@@ -309,14 +309,14 @@ func TestElisionDropsOldestAndRecordsDiagnostic(t *testing.T) {
 	if !sawLast {
 		t.Fatal("the newest turns must survive the fit")
 	}
-	var sawElided bool
+	var sawOmitted bool
 	for _, d := range diags {
-		if d.Code == "transcript.elided" {
-			sawElided = true
+		if d.Code == "transcript.omitted" {
+			sawOmitted = true
 		}
 	}
-	if !sawElided {
-		t.Fatalf("dropping turns to fit must be recorded as transcript.elided; got %v", diags)
+	if !sawOmitted {
+		t.Fatalf("dropping turns to fit must be recorded as transcript.omitted; got %v", diags)
 	}
 }
 
@@ -730,12 +730,12 @@ func TestStageNames(t *testing.T) {
 	}
 }
 
-func TestFitUnitsWithNoBudgetElidesEverything(t *testing.T) {
+func TestFitUnitsWithNoBudgetOmitsEverything(t *testing.T) {
 	turns := []domain.Turn{textTurn("a", "user", "x")}
 	cost := func([]domain.Turn) (int, error) { return 0, nil }
-	kept, elided := fitUnits(pairToolCalls(turns), cost, 0)
-	if len(kept) != 0 || len(elided) != 1 {
-		t.Fatalf("kept=%d elided=%d, want all elided", len(kept), len(elided))
+	kept, omitted := fitUnits(pairToolCalls(turns), cost, 0)
+	if len(kept) != 0 || len(omitted) != 1 {
+		t.Fatalf("kept=%d omitted=%d, want all omitted", len(kept), len(omitted))
 	}
 }
 

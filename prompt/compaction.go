@@ -76,16 +76,16 @@ type ToolRound struct {
 // CompactionInput is the full picture a compactor may need to judge
 // relevance. Compaction is a relevance judgment, and relevance is relative
 // to the conversation: role, topics, what was already summarized, what
-// content is linked. The elided turns are a hint, not a mandate — an
+// content is linked. The omitted turns are a hint, not a mandate — an
 // implementation may summarize a different span, digest tool rounds instead
 // of prose, or decline entirely.
 type CompactionInput struct {
 	// Snapshot is the consistent read of the conversation the summary is
 	// for, including the FULL active chain, not just the tail.
 	Snapshot Snapshot
-	// Elided lists the turns the current fit would drop (chronological).
+	// Omitted lists the turns the current fit would drop (chronological).
 	// Empty when the transcript still fits.
-	Elided []domain.Turn
+	Omitted []domain.Turn
 	// ToolRounds lists the completed tool exchanges available for
 	// digesting, oldest first.
 	ToolRounds []ToolRound

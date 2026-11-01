@@ -310,7 +310,7 @@ func goldenResolveDiagnostics() Input {
 	return in
 }
 
-func goldenElision() Input {
+func goldenOmission() Input {
 	in := baseInput()
 	in.ContextWindow = 25
 	in.MaxOutputTokens = 5
@@ -332,7 +332,7 @@ func goldenCases() map[string]Input {
 		"hybrid":              goldenHybrid(),
 		"transcript-tools":    goldenTranscriptTools(),
 		"resolve-diagnostics": goldenResolveDiagnostics(),
-		"elision":             goldenElision(),
+		"omission":            goldenOmission(),
 	}
 }
 

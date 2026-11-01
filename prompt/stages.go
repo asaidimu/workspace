@@ -244,7 +244,7 @@ func (compactStage) Name() string { return "compact" }
 
 // Run fits the token budget. Fixed sections are costed first: if they alone
 // exceed the budget the build fails, because that is a configuration problem
-// no amount of transcript elision can fix.
+// no amount of transcript omission can fix.
 //
 // The build itself never calls a model. Committed tool digests are spliced
 // into old tool rounds first, and the newest committed summary turn anchors
@@ -293,12 +293,12 @@ func (compactStage) Run(ctx context.Context, b *Build) error {
 	costFn := func(ts []domain.Turn) (int, error) {
 		return b.tokenizer.Count(b.input.Model, messageParts(ctx, b, ts))
 	}
-	kept, elided := fitUnits(units, costFn, window-fixed)
+	kept, omitted := fitUnits(units, costFn, window-fixed)
 	b.Transcript = append(anchored, kept...)
 
-	if len(elided) > 0 {
-		b.diagnostics("transcript.elided",
-			fmt.Sprintf("%d turns after the last summary anchor did not fit the budget", len(elided)), nil)
+	if len(omitted) > 0 {
+		b.diagnostics("transcript.omitted",
+			fmt.Sprintf("%d turns after the last summary anchor did not fit the budget", len(omitted)), nil)
 	}
 
 	used, err := b.tokenizer.Count(b.input.Model, messageParts(ctx, b, b.Transcript))
@@ -381,15 +381,15 @@ func turnHasToolResult(t domain.Turn, callID string) bool {
 }
 
 // fitUnits keeps whole units newest first until the budget is spent, and
-// returns the elided turns in their original order so a compactor sees them
+// returns the omitted turns in their original order so a compactor sees them
 // chronologically. cost returns the token cost of one unit; the stage wires
 // it to the tokenizer over the build's own block mapping.
-func fitUnits(units [][]domain.Turn, cost func([]domain.Turn) (int, error), budget int) (kept, elided []domain.Turn) {
+func fitUnits(units [][]domain.Turn, cost func([]domain.Turn) (int, error), budget int) (kept, omitted []domain.Turn) {
 	if budget <= 0 {
 		for _, u := range units {
-			elided = append(elided, u...)
+			omitted = append(omitted, u...)
 		}
-		return nil, elided
+		return nil, omitted
 	}
 
 	include := make([]bool, len(units))
@@ -410,10 +410,10 @@ func fitUnits(units [][]domain.Turn, cost func([]domain.Turn) (int, error), budg
 		if include[i] {
 			kept = append(kept, u...)
 		} else {
-			elided = append(elided, u...)
+			omitted = append(omitted, u...)
 		}
 	}
-	return kept, elided
+	return kept, omitted
 }
 
 // --- stage 5: assemble ---

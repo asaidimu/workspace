@@ -30,7 +30,7 @@
   },
   "diagnostics": [
     {
-      "code": "transcript.elided",
+      "code": "transcript.omitted",
       "message": "1 turns after the last summary anchor did not fit the budget"
     }
   ]

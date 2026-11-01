@@ -98,7 +98,7 @@ func TestModelCompactorProducesBothKinds(t *testing.T) {
 	fp := &fakeProvider{name: "fake", reply: digesterReply}
 	mc := &ModelCompactor{Provider: fp, Model: "small/fast"}
 
-	elided := []domain.Turn{
+	omitted := []domain.Turn{
 		textTurn("t1", "user", "why does TestSplit fail?"),
 		textTurn("t2", "agent", "let me look"),
 		textTurn("t3", "user", "and the fix?"),
@@ -112,7 +112,7 @@ func TestModelCompactorProducesBothKinds(t *testing.T) {
 
 	out, err := mc.Compact(context.Background(), prompt.CompactionInput{
 		Snapshot:   prompt.Snapshot{Conversation: domain.Conversation{ID: "c1"}},
-		Elided:     elided,
+		Omitted:    omitted,
 		ToolRounds: rounds,
 	})
 	if err != nil {
@@ -155,7 +155,7 @@ func TestModelCompactorSkipsSmallHistoryWithoutRounds(t *testing.T) {
 	mc := &ModelCompactor{Provider: fp, Model: "small/fast"}
 
 	out, err := mc.Compact(context.Background(), prompt.CompactionInput{
-		Elided: []domain.Turn{ // below MinTurns
+		Omitted: []domain.Turn{ // below MinTurns
 			textTurn("t1", "user", "hello"),
 			textTurn("t2", "agent", "hi"),
 		},
